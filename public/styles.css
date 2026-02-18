@@ -66,6 +66,20 @@ nav a.active {
   font-size: 17px;
 }
 
+.summary-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.summary-range {
+  font-size: 13px;
+  color: #475569;
+  font-weight: 500;
+}
+
 .row {
   display: flex;
   gap: 12px;
@@ -179,6 +193,50 @@ button.secondary:hover {
 
 .stat-line strong {
   color: #0f172a;
+}
+
+.overview-card {
+  background: linear-gradient(120deg, #eff6ff 0%, #e0e7ff 100%);
+}
+
+.metric-card {
+  background: #ffffff;
+  border: 1px solid #dbeafe;
+}
+
+.metric-title {
+  display: block;
+  font-size: 18px;
+  line-height: 1.2;
+  color: #0f172a;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+  color: #334155;
+  margin-top: 4px;
+}
+
+.metric-row-avg {
+  margin-bottom: 2px;
+}
+
+.metric-value {
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.metric-value-avg {
+  font-size: 22px;
+  line-height: 1;
+  color: #1d4ed8;
+  font-weight: 800;
 }
 
 .chart-wrap {

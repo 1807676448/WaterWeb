@@ -69,10 +69,13 @@ async function saveWaterQuality(deviceId, payload) {
     ]
   );
 
-  await upsertDevice(finalDeviceId, {
-    status: 'online',
-    runtime_seconds: parseRuntimeSeconds(payload)
-  });
+  await run(
+    `INSERT INTO devices (device_id, status, runtime_seconds, last_seen, updated_at)
+     VALUES (?, 'offline', 0, NULL, ?)
+     ON CONFLICT(device_id) DO UPDATE SET
+       updated_at=excluded.updated_at`,
+    [finalDeviceId, now]
+  );
 }
 
 async function upsertDevice(deviceId, patch = {}) {
@@ -125,10 +128,10 @@ async function listDevices() {
   const now = dayjs();
   return rows.map((row) => {
     const lastSeen = row.last_seen ? dayjs(row.last_seen) : null;
-    const online = !!lastSeen && now.diff(lastSeen, 'second') <= 120;
+    const online = !!lastSeen && now.diff(lastSeen, 'second') <= 180;
     return {
       ...row,
-      status: online ? 'online' : row.status || 'offline'
+      status: online ? 'online' : 'offline'
     };
   });
 }

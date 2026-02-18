@@ -65,22 +65,20 @@ function renderRawJson(item) {
 
 function renderSummary(rows) {
   const wrap = document.getElementById('summaryCards');
+  const rangeEl = document.getElementById('summaryRange');
   const rangeText = rows.length
     ? `${formatDisplayTime(rows[rows.length - 1]?.created_at)} ~ ${formatDisplayTime(rows[0]?.created_at)}`
     : '--';
+  rangeEl.textContent = `时间范围：${rangeText}`;
 
   const fixedCards = `
-    <div class="stat-item">
+    <div class="stat-item overview-card">
       <span class="stat-label">样本总数</span>
       <strong class="stat-value">${rows.length}</strong>
     </div>
-    <div class="stat-item">
+    <div class="stat-item overview-card">
       <span class="stat-label">设备数量</span>
       <strong class="stat-value">${new Set(rows.map((row) => row.device_id)).size}</strong>
-    </div>
-    <div class="stat-item">
-      <span class="stat-label">统计时间范围</span>
-      <strong class="stat-value stat-value-sm">${rangeText}</strong>
     </div>
   `;
 
@@ -91,12 +89,11 @@ function renderSummary(rows) {
 
     if (!values.length) {
       return `
-        <div class="stat-item">
-          <span class="stat-label">${metric.label}</span>
-          <span class="stat-sub">时间范围：${rangeText}</span>
-          <div class="stat-line"><span>平均</span><strong>--</strong></div>
-          <div class="stat-line"><span>最大</span><strong>--</strong></div>
-          <div class="stat-line"><span>最小</span><strong>--</strong></div>
+        <div class="stat-item metric-card">
+          <strong class="metric-title">${metric.label}</strong>
+          <div class="metric-row metric-row-avg"><span>平均</span><strong class="metric-value metric-value-avg">--</strong></div>
+          <div class="metric-row"><span>最大</span><strong class="metric-value">--</strong></div>
+          <div class="metric-row"><span>最小</span><strong class="metric-value">--</strong></div>
         </div>
       `;
     }
@@ -107,12 +104,11 @@ function renderSummary(rows) {
     const min = Math.min(...values);
 
     return `
-      <div class="stat-item">
-        <span class="stat-label">${metric.label}</span>
-        <span class="stat-sub">时间范围：${rangeText}</span>
-        <div class="stat-line"><span>平均</span><strong>${formatNum(avg, metric.digits)}</strong></div>
-        <div class="stat-line"><span>最大</span><strong>${formatNum(max, metric.digits)}</strong></div>
-        <div class="stat-line"><span>最小</span><strong>${formatNum(min, metric.digits)}</strong></div>
+      <div class="stat-item metric-card">
+        <strong class="metric-title">${metric.label}</strong>
+        <div class="metric-row metric-row-avg"><span>平均</span><strong class="metric-value metric-value-avg">${formatNum(avg, metric.digits)}</strong></div>
+        <div class="metric-row"><span>最大</span><strong class="metric-value">${formatNum(max, metric.digits)}</strong></div>
+        <div class="metric-row"><span>最小</span><strong class="metric-value">${formatNum(min, metric.digits)}</strong></div>
       </div>
     `;
   }).join('');
