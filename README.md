@@ -353,21 +353,27 @@ mosquitto_pub -h 106.15.53.24 -p 1883 -t devices/device_002/status -m '{"device_
 mosquitto_sub -h 106.15.53.24 -p 1883 -t devices/device_002/down -v
 ```
 
-### 8.5 触发时间戳下发验证
+### 8.5 通过 MQTT 触发时间戳下发（推荐）
 
-在任意可访问平台 API 的环境执行：
+1) 先在本地开一个订阅窗口（接收下发）：
 
 ```bash
-curl -X POST http://106.15.53.24/api/iot/command \
-  -H "Content-Type: application/json" \
-  -d '{"device_id":"device_002","command":"time"}'
+mosquitto_sub -h 106.15.53.24 -p 1883 -t devices/device_002/down -v
 ```
 
-如果链路正常，`mosquitto_sub` 窗口会收到类似：
+2) 再发布命令到设备命令 Topic：
+
+```bash
+mosquitto_pub -h 106.15.53.24 -p 1883 -t devices/device_002/command -m '{"device_id":"device_002","command":"time"}'
+```
+
+如果链路正常，订阅窗口会收到类似：
 
 ```json
 devices/device_002/down {"timestamp":1760000000000}
 ```
+
+> 说明：平台仍支持 `POST /api/iot/command`，但这是给管理端/平台端用的备用入口；设备联调建议优先使用 MQTT 命令主题。
 
 ### 8.6 联调检查清单
 
