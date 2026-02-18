@@ -291,3 +291,20 @@ bash deploy/scripts/deploy.sh
 ```
 
 该脚本会自动：同步代码、安装依赖、重启服务、重载 Nginx。
+
+### 7.7 常见错误：502 Bad Gateway
+
+当 `curl http://127.0.0.1:3000/health` 失败且页面出现 `502`，说明 Node 服务未监听 3000。优先排查：
+
+```bash
+sudo systemctl status water-quality-platform -l --no-pager
+sudo journalctl -u water-quality-platform -n 100 --no-pager
+sudo ss -ltnp | grep 3000 || true
+```
+
+如果日志包含 `EACCES`（目录或数据库权限不足），重新执行部署脚本即可自动修复权限：
+
+```bash
+cd /home/admin/WaterWeb
+bash deploy/scripts/deploy.sh
+```
