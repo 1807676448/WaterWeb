@@ -1,0 +1,16 @@
+[Unit]
+Description=MQTT Water Quality Platform
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/mqtt-water-quality-platform
+ExecStart=/usr/bin/node src/server.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+EnvironmentFile=/opt/mqtt-water-quality-platform/.env
+
+[Install]
+WantedBy=multi-user.target

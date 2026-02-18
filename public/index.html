@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>水质数据平台</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header>
+    <h2>水质检测数据平台</h2>
+    <nav>
+      <a class="active" href="/index.html">数据展示</a>
+      <a href="/devices.html">设备管理</a>
+      <a href="/deepseek.html">DeepSeek 分析</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <div class="row">
+        <label>设备ID <input id="deviceId" placeholder="可选，如 device_001" /></label>
+        <label>开始时间 <input id="startTime" type="datetime-local" /></label>
+        <label>结束时间 <input id="endTime" type="datetime-local" /></label>
+        <button id="queryBtn">查询范围数据</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <canvas id="lineChart" height="100"></canvas>
+    </div>
+
+    <div class="card">
+      <h3>明细数据</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>时间</th>
+            <th>设备</th>
+            <th>TDS</th>
+            <th>COD</th>
+            <th>TOC</th>
+            <th>UV254</th>
+            <th>pH</th>
+            <th>Tem</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="/scripts/index.js"></script>
+</body>
+</html>

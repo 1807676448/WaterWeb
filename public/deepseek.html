@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DeepSeek 分析</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <h2>DeepSeek 分析页面</h2>
+    <nav>
+      <a href="/index.html">数据展示</a>
+      <a href="/devices.html">设备管理</a>
+      <a class="active" href="/deepseek.html">DeepSeek 分析</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <div class="row">
+        <label>设备ID <input id="deviceId" placeholder="可选，留空分析所有设备最近10次" /></label>
+        <button id="analyzeBtn">请求 DeepSeek 分析</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>分析结果</h3>
+      <pre id="result">点击按钮后显示分析内容</pre>
+    </div>
+  </div>
+
+  <script src="/scripts/deepseek.js"></script>
+</body>
+</html>
