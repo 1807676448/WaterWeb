@@ -26,18 +26,37 @@ function formatDateTimeLocal(date) {
 }
 
 function initDefaultTimeRange() {
-  const end = new Date();
+  const end = new Date(Date.now() + 60 * 1000);
   const start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
   document.getElementById('startTime').value = formatDateTimeLocal(start);
   document.getElementById('endTime').value = formatDateTimeLocal(end);
 }
 
 function setQuickRange(hours) {
-  const end = new Date();
+  const end = new Date(Date.now() + 60 * 1000);
   const start = new Date(end.getTime() - hours * 60 * 60 * 1000);
   document.getElementById('startTime').value = formatDateTimeLocal(start);
   document.getElementById('endTime').value = formatDateTimeLocal(end);
   queryData();
+}
+
+function isRealtimeMode() {
+  return document.getElementById('realtimeMode').value === 'on';
+}
+
+function currentRealtimeEnd() {
+  return new Date(Date.now() + 60 * 1000);
+}
+
+function syncRealtimeEndField() {
+  if (!isRealtimeMode()) {
+    document.getElementById('endTime').disabled = false;
+    return;
+  }
+
+  const end = currentRealtimeEnd();
+  document.getElementById('endTime').value = formatDateTimeLocal(end);
+  document.getElementById('endTime').disabled = true;
 }
 
 async function loadDeviceOptions() {
@@ -252,7 +271,15 @@ async function queryData() {
 
   const deviceId = document.getElementById('deviceId').value.trim();
   const start = formatDateForApi(document.getElementById('startTime').value);
-  const end = formatDateForApi(document.getElementById('endTime').value);
+  const endValue = isRealtimeMode()
+    ? formatDateTimeLocal(currentRealtimeEnd())
+    : document.getElementById('endTime').value;
+
+  if (isRealtimeMode()) {
+    document.getElementById('endTime').value = endValue;
+  }
+
+  const end = formatDateForApi(endValue);
 
   const query = new URLSearchParams();
   if (deviceId) query.set('device_id', deviceId);
@@ -277,15 +304,21 @@ document.getElementById('queryBtn').addEventListener('click', queryData);
 document.getElementById('range1h').addEventListener('click', () => setQuickRange(1));
 document.getElementById('range24h').addEventListener('click', () => setQuickRange(24));
 document.getElementById('range7d').addEventListener('click', () => setQuickRange(24 * 7));
+document.getElementById('realtimeMode').addEventListener('change', () => {
+  syncRealtimeEndField();
+  queryData();
+});
 
 async function initPage() {
   initDefaultTimeRange();
+  syncRealtimeEndField();
   await loadDeviceOptions();
   await queryData();
   setInterval(() => {
     if (document.hidden) {
       return;
     }
+    syncRealtimeEndField();
     queryData();
   }, REFRESH_INTERVAL_MS);
 }
