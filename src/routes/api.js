@@ -1,5 +1,9 @@
 const express = require('express');
-const { listMetrics, listDevices } = require('../services/deviceService');
+const {
+  listMetrics,
+  listDevices,
+  listCommands
+} = require('../services/deviceService');
 const { handleDeviceCommand } = require('../services/mqttService');
 const { analyzeLatestWaterQuality, latestAnalysisReport } = require('../services/deepseekService');
 
@@ -13,7 +17,7 @@ router.get('/metrics', async (req, res) => {
       deviceId,
       start,
       end,
-      limit: Math.min(Math.max(Number.isFinite(parsedLimit) ? parsedLimit : 120, 1), 300)
+      limit: Math.min(Math.max(Number.isFinite(parsedLimit) ? parsedLimit : 100, 1), 100)
     });
     res.json({ data });
   } catch (error) {
@@ -24,6 +28,20 @@ router.get('/metrics', async (req, res) => {
 router.get('/devices', async (req, res) => {
   try {
     const data = await listDevices();
+    res.json({ data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/commands', async (req, res) => {
+  try {
+    const { device_id: deviceId, limit } = req.query;
+    const parsedLimit = Number(limit || 100);
+    const data = await listCommands({
+      deviceId,
+      limit: Math.min(Math.max(Number.isFinite(parsedLimit) ? parsedLimit : 100, 1), 100)
+    });
     res.json({ data });
   } catch (error) {
     res.status(500).json({ error: error.message });

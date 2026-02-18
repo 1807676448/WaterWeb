@@ -49,6 +49,7 @@ npm run dev
 - 数据展示页：`http://服务器IP:3000/index.html`
 - 设备管理页：`http://服务器IP:3000/devices.html`
 - DeepSeek 分析页：`http://服务器IP:3000/deepseek.html`
+- 指令执行页：`http://服务器IP:3000/commands.html`
 
 ## 3. 功能说明
 
@@ -267,6 +268,7 @@ sudo systemctl restart nginx
 - `http://你的服务器公网IP/index.html`
 - `http://你的服务器公网IP/devices.html`
 - `http://你的服务器公网IP/deepseek.html`
+- `http://你的服务器公网IP/commands.html`
 
 若访问公网 IP 出现 `404 Not Found (nginx/1.24.0)`，通常是命中了 Ubuntu 默认站点。可执行：
 

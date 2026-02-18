@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>指令执行</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <h2>指令执行界面</h2>
+    <nav>
+      <a href="/index.html">数据展示</a>
+      <a href="/devices.html">设备管理</a>
+      <a href="/deepseek.html">DeepSeek 分析</a>
+      <a class="active" href="/commands.html">指令执行</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <div class="row">
+        <label>设备ID
+          <select id="deviceId">
+            <option value="">全部设备</option>
+          </select>
+        </label>
+        <label>显示条数
+          <select id="limit">
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100" selected>100</option>
+          </select>
+        </label>
+        <button id="refreshBtn">刷新指令记录</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>时间</th>
+            <th>设备ID</th>
+            <th>指令</th>
+            <th>执行状态</th>
+            <th>收到的命令</th>
+            <th>执行结果</th>
+          </tr>
+        </thead>
+        <tbody id="commandTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="/scripts/commands.js"></script>
+</body>
+</html>

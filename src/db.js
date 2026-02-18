@@ -111,6 +111,16 @@ async function initDb() {
   `);
 
   await run(`
+    CREATE INDEX IF NOT EXISTS idx_commands_created_at
+    ON commands(created_at DESC)
+  `);
+
+  await run(`
+    CREATE INDEX IF NOT EXISTS idx_commands_device_created
+    ON commands(device_id, created_at DESC)
+  `);
+
+  await run(`
     CREATE TABLE IF NOT EXISTS analysis_reports (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       device_id TEXT,

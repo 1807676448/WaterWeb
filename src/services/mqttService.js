@@ -9,6 +9,20 @@ const {
 
 let client;
 
+async function recordCommand(deviceId, command, requestPayload, responsePayload) {
+  await run(
+    `INSERT INTO commands(device_id, command, request_json, response_json, created_at)
+     VALUES (?, ?, ?, ?, ?)`,
+    [
+      deviceId || 'unknown',
+      command || 'unknown',
+      JSON.stringify(requestPayload || {}),
+      JSON.stringify(responsePayload || {}),
+      dayjs().toISOString()
+    ]
+  );
+}
+
 function topicDeviceId(topic) {
   const parts = topic.split('/');
   return parts.length >= 2 ? parts[1] : '';
@@ -25,29 +39,34 @@ function resolveDeviceId(topic, payload = {}) {
 }
 
 async function handleDeviceCommand(commandPayload, sourceDeviceId) {
-  const deviceId = commandPayload.device_id || sourceDeviceId;
-  if (!deviceId || commandPayload.command !== 'time') {
+  const deviceId = commandPayload?.device_id || sourceDeviceId || 'unknown';
+  const command = commandPayload?.command || 'unknown';
+
+  if (!commandPayload?.device_id && !sourceDeviceId) {
+    await recordCommand(deviceId, command, commandPayload, {
+      ok: false,
+      error: 'missing device_id'
+    });
+    return null;
+  }
+
+  if (command !== 'time') {
+    await recordCommand(deviceId, command, commandPayload, {
+      ok: false,
+      error: 'unsupported command'
+    });
     return null;
   }
 
   const response = {
+    ok: true,
     timestamp: Date.now()
   };
 
   const downTopic = config.mqtt.downlinkTopicTemplate.replace('{device_id}', deviceId);
   client.publish(downTopic, JSON.stringify(response), { qos: 1 });
 
-  await run(
-    `INSERT INTO commands(device_id, command, request_json, response_json, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    [
-      deviceId,
-      commandPayload.command,
-      JSON.stringify(commandPayload),
-      JSON.stringify(response),
-      dayjs().toISOString()
-    ]
-  );
+  await recordCommand(deviceId, command, commandPayload, response);
 
   return response;
 }

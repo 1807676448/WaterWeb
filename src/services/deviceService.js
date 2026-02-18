@@ -137,7 +137,7 @@ async function listDevices() {
 }
 
 async function listMetrics({ deviceId, start, end, limit = 200 }) {
-  const safeLimit = Math.min(Math.max(Number(limit) || 200, 1), 300);
+  const safeLimit = Math.min(Math.max(Number(limit) || 100, 1), 100);
   const conditions = [];
   const params = [];
 
@@ -186,10 +186,49 @@ async function latestWaterQuality(deviceId, count = 10) {
   );
 }
 
+async function listCommands({ deviceId, limit = 100 }) {
+  const safeLimit = Math.min(Math.max(Number(limit) || 100, 1), 100);
+  const conditions = [];
+  const params = [];
+
+  if (deviceId) {
+    conditions.push('device_id = ?');
+    params.push(deviceId);
+  }
+
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  params.push(safeLimit);
+
+  const rows = await all(
+    `SELECT id, device_id, command, request_json, response_json, created_at
+     FROM commands
+     ${where}
+     ORDER BY created_at DESC
+     LIMIT ?`,
+    params
+  );
+
+  return rows.map((row) => {
+    let parsedResponse = null;
+    try {
+      parsedResponse = row.response_json ? JSON.parse(row.response_json) : null;
+    } catch (error) {
+      parsedResponse = null;
+    }
+
+    const success = !!(parsedResponse && parsedResponse.ok !== false && !parsedResponse.error);
+    return {
+      ...row,
+      execution_status: success ? 'success' : 'failed'
+    };
+  });
+}
+
 module.exports = {
   saveWaterQuality,
   updateDeviceStatus,
   listDevices,
   listMetrics,
-  latestWaterQuality
+  latestWaterQuality,
+  listCommands
 };

@@ -287,7 +287,7 @@ async function queryData() {
   if (deviceId) query.set('device_id', deviceId);
   if (start) query.set('start', start);
   if (end) query.set('end', end);
-  query.set('limit', isRealtimeMode() ? '120' : '200');
+  query.set('limit', isRealtimeMode() ? '80' : '100');
 
   try {
     const response = await fetch(`/api/metrics?${query.toString()}`);
