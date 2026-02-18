@@ -14,6 +14,16 @@ function topicDeviceId(topic) {
   return parts.length >= 2 ? parts[1] : '';
 }
 
+function resolveDeviceId(topic, payload = {}) {
+  return String(
+    topicDeviceId(topic)
+    || payload.device_id
+    || payload.deviceId
+    || payload.id
+    || ''
+  ).trim();
+}
+
 async function handleDeviceCommand(commandPayload, sourceDeviceId) {
   const deviceId = commandPayload.device_id || sourceDeviceId;
   if (!deviceId || commandPayload.command !== 'time') {
@@ -59,13 +69,13 @@ function connectMqtt() {
 
   client.on('message', async (topic, payloadBuffer) => {
     const payloadText = payloadBuffer.toString('utf-8');
-    const deviceId = topicDeviceId(topic);
 
     try {
       const payload = JSON.parse(payloadText);
+      const deviceId = resolveDeviceId(topic, payload);
 
       if (topic.includes('/up')) {
-        await saveWaterQuality(deviceId || String(payload.id || 'unknown'), payload);
+        await saveWaterQuality(deviceId, payload);
         return;
       }
 

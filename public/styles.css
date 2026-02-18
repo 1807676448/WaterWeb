@@ -194,6 +194,18 @@ tbody tr:nth-child(even) {
   background: #fbfdff;
 }
 
+.json-cell {
+  margin: 8px 0 0;
+  max-width: 420px;
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre;
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 8px;
+}
+
 .table-empty {
   text-align: center;
   color: #64748b;

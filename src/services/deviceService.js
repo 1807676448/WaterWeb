@@ -5,14 +5,54 @@ function extractMetric(payload, key) {
   return payload?.params?.[key]?.value ?? null;
 }
 
+function normalizeDeviceId(...values) {
+  for (const value of values) {
+    if (value === null || value === undefined) continue;
+    const text = String(value).trim();
+    if (text) return text;
+  }
+  return '';
+}
+
+function parseRuntimeSeconds(statusPayload = {}) {
+  const candidate = statusPayload.runtime_seconds
+    ?? statusPayload.runtimeSeconds
+    ?? statusPayload.runtime
+    ?? statusPayload.uptime;
+
+  if (candidate === null || candidate === undefined || candidate === '') {
+    return null;
+  }
+
+  const value = Number(candidate);
+  return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : null;
+}
+
+function parseDeviceStatus(statusPayload = {}) {
+  if (typeof statusPayload.online === 'boolean') {
+    return statusPayload.online ? 'online' : 'offline';
+  }
+
+  const statusText = String(statusPayload.status || '').trim().toLowerCase();
+  if (statusText === 'online' || statusText === 'offline') {
+    return statusText;
+  }
+  return 'online';
+}
+
 async function saveWaterQuality(deviceId, payload) {
+  const finalDeviceId = normalizeDeviceId(deviceId, payload?.device_id, payload?.deviceId, payload?.id);
+  if (!finalDeviceId) {
+    return;
+  }
+
   const now = dayjs().toISOString();
   await run(
     `INSERT INTO water_quality (
       device_id, tds, cod, toc, uv254, ph, tem, tur, air_temp, air_hum, pressure, altitude, raw_json, created_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      deviceId,
+      finalDeviceId,
       extractMetric(payload, 'TDS'),
       extractMetric(payload, 'COD'),
       extractMetric(payload, 'TOC'),
@@ -29,13 +69,21 @@ async function saveWaterQuality(deviceId, payload) {
     ]
   );
 
-  await upsertDevice(deviceId, { status: 'online' });
+  await upsertDevice(finalDeviceId, {
+    status: 'online',
+    runtime_seconds: parseRuntimeSeconds(payload)
+  });
 }
 
 async function upsertDevice(deviceId, patch = {}) {
+  const finalDeviceId = normalizeDeviceId(deviceId, patch.device_id, patch.deviceId, patch.id);
+  if (!finalDeviceId) {
+    return;
+  }
+
   const now = dayjs().toISOString();
-  const status = patch.status || 'online';
-  const runtimeSeconds = Number(patch.runtime_seconds ?? 0);
+  const status = parseDeviceStatus(patch);
+  const runtimeSeconds = parseRuntimeSeconds(patch);
 
   await run(
     `INSERT INTO devices (device_id, status, runtime_seconds, last_seen, updated_at)
@@ -43,19 +91,27 @@ async function upsertDevice(deviceId, patch = {}) {
      ON CONFLICT(device_id) DO UPDATE SET
       status=excluded.status,
       runtime_seconds=CASE
-        WHEN excluded.runtime_seconds > 0 THEN excluded.runtime_seconds
+        WHEN excluded.runtime_seconds IS NOT NULL THEN excluded.runtime_seconds
         ELSE devices.runtime_seconds
       END,
       last_seen=excluded.last_seen,
       updated_at=excluded.updated_at`,
-    [deviceId, status, runtimeSeconds, now, now]
+    [finalDeviceId, status, runtimeSeconds, now, now]
   );
 }
 
 async function updateDeviceStatus(deviceId, statusPayload = {}) {
-  await upsertDevice(deviceId, {
-    status: statusPayload.status || 'online',
-    runtime_seconds: statusPayload.runtime_seconds
+  const finalDeviceId = normalizeDeviceId(
+    deviceId,
+    statusPayload.device_id,
+    statusPayload.deviceId,
+    statusPayload.id
+  );
+
+  await upsertDevice(finalDeviceId, {
+    device_id: finalDeviceId,
+    status: parseDeviceStatus(statusPayload),
+    runtime_seconds: parseRuntimeSeconds(statusPayload)
   });
 }
 
@@ -98,7 +154,7 @@ async function listMetrics({ deviceId, start, end, limit = 200 }) {
   params.push(limit);
 
   return all(
-    `SELECT id, device_id, tds, cod, toc, uv254, ph, tem, tur, air_temp, air_hum, pressure, altitude, created_at
+    `SELECT id, device_id, tds, cod, toc, uv254, ph, tem, tur, air_temp, air_hum, pressure, altitude, raw_json, created_at
      FROM water_quality
      ${where}
      ORDER BY created_at DESC

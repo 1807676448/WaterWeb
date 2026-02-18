@@ -19,6 +19,36 @@ function formatNum(value, digits = 2) {
   return num.toFixed(digits);
 }
 
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function parseRawJson(rawText) {
+  if (!rawText) return null;
+  try {
+    return JSON.parse(rawText);
+  } catch (error) {
+    return null;
+  }
+}
+
+function reportId(item) {
+  const raw = parseRawJson(item.raw_json);
+  return raw?.id ?? '--';
+}
+
+function renderRawJson(item) {
+  if (!item.raw_json) return '--';
+  const parsed = parseRawJson(item.raw_json);
+  const text = parsed ? JSON.stringify(parsed, null, 2) : item.raw_json;
+  return `<details><summary>查看</summary><pre class="json-cell">${escapeHtml(text)}</pre></details>`;
+}
+
 function renderSummary(rows) {
   const wrap = document.getElementById('summaryCards');
   if (!rows.length) {
@@ -88,14 +118,15 @@ function renderSummary(rows) {
 function renderTable(rows) {
   const tbody = document.getElementById('tableBody');
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="13" class="table-empty">暂无数据</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="15" class="table-empty">暂无数据</td></tr>';
     return;
   }
 
   tbody.innerHTML = rows.map((item) => `
     <tr>
       <td>${formatDisplayTime(item.created_at)}</td>
-      <td>${item.device_id}</td>
+      <td>${escapeHtml(item.device_id || '--')}</td>
+      <td>${escapeHtml(reportId(item))}</td>
       <td>${formatNum(item.tds)}</td>
       <td>${formatNum(item.cod)}</td>
       <td>${formatNum(item.toc)}</td>
@@ -107,6 +138,7 @@ function renderTable(rows) {
       <td>${formatNum(item.air_hum)}</td>
       <td>${formatNum(item.pressure)}</td>
       <td>${formatNum(item.altitude)}</td>
+      <td>${renderRawJson(item)}</td>
     </tr>
   `).join('');
 }
