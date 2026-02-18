@@ -268,6 +268,20 @@ sudo systemctl restart nginx
 - `http://你的服务器公网IP/devices.html`
 - `http://你的服务器公网IP/deepseek.html`
 
+若访问公网 IP 出现 `404 Not Found (nginx/1.24.0)`，通常是命中了 Ubuntu 默认站点。可执行：
+
+```bash
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+并检查当前生效配置：
+
+```bash
+sudo nginx -T | grep -n "water-quality-platform.conf\|default_server\|proxy_pass"
+```
+
 ### 7.6 后续更新发布
 
 每次代码更新后，在项目目录执行：
