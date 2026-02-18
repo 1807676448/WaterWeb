@@ -1,5 +1,19 @@
 let chart;
 
+const METRIC_FIELDS = [
+  { key: 'tds', label: 'TDS', digits: 2, color: '#2563eb' },
+  { key: 'cod', label: 'COD', digits: 2, color: '#10b981' },
+  { key: 'toc', label: 'TOC', digits: 2, color: '#f59e0b' },
+  { key: 'uv254', label: 'UV254', digits: 4, color: '#a855f7' },
+  { key: 'ph', label: 'pH', digits: 2, color: '#0ea5e9' },
+  { key: 'tem', label: 'Tem', digits: 2, color: '#ef4444' },
+  { key: 'tur', label: 'Tur', digits: 2, color: '#f97316' },
+  { key: 'air_temp', label: 'air_temp', digits: 2, color: '#14b8a6' },
+  { key: 'air_hum', label: 'air_hum', digits: 2, color: '#22c55e' },
+  { key: 'pressure', label: 'pressure', digits: 2, color: '#6366f1' },
+  { key: 'altitude', label: 'altitude', digits: 2, color: '#ec4899' }
+];
+
 function formatDateForApi(dateText) {
   if (!dateText) return '';
   return new Date(dateText).toISOString();
@@ -51,68 +65,59 @@ function renderRawJson(item) {
 
 function renderSummary(rows) {
   const wrap = document.getElementById('summaryCards');
-  if (!rows.length) {
-    wrap.innerHTML = `
-      <div class="stat-item">
-        <span class="stat-label">样本总数</span>
-        <strong class="stat-value">0</strong>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">设备数量</span>
-        <strong class="stat-value">0</strong>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">平均 pH</span>
-        <strong class="stat-value">--</strong>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">最高 COD</span>
-        <strong class="stat-value">--</strong>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">平均 TDS</span>
-        <strong class="stat-value">--</strong>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">最新温度</span>
-        <strong class="stat-value">--</strong>
-      </div>
-    `;
-    return;
-  }
+  const rangeText = rows.length
+    ? `${formatDisplayTime(rows[rows.length - 1]?.created_at)} ~ ${formatDisplayTime(rows[0]?.created_at)}`
+    : '--';
 
-  const deviceCount = new Set(rows.map((row) => row.device_id)).size;
-  const avgPh = rows.reduce((sum, row) => sum + (Number(row.ph) || 0), 0) / rows.length;
-  const avgTds = rows.reduce((sum, row) => sum + (Number(row.tds) || 0), 0) / rows.length;
-  const maxCod = Math.max(...rows.map((row) => Number(row.cod) || 0));
-  const latestTem = rows[0]?.tem;
-
-  wrap.innerHTML = `
+  const fixedCards = `
     <div class="stat-item">
       <span class="stat-label">样本总数</span>
       <strong class="stat-value">${rows.length}</strong>
     </div>
     <div class="stat-item">
       <span class="stat-label">设备数量</span>
-      <strong class="stat-value">${deviceCount}</strong>
+      <strong class="stat-value">${new Set(rows.map((row) => row.device_id)).size}</strong>
     </div>
     <div class="stat-item">
-      <span class="stat-label">平均 pH</span>
-      <strong class="stat-value">${formatNum(avgPh)}</strong>
-    </div>
-    <div class="stat-item">
-      <span class="stat-label">最高 COD</span>
-      <strong class="stat-value">${formatNum(maxCod)}</strong>
-    </div>
-    <div class="stat-item">
-      <span class="stat-label">平均 TDS</span>
-      <strong class="stat-value">${formatNum(avgTds)}</strong>
-    </div>
-    <div class="stat-item">
-      <span class="stat-label">最新温度</span>
-      <strong class="stat-value">${formatNum(latestTem)}</strong>
+      <span class="stat-label">统计时间范围</span>
+      <strong class="stat-value stat-value-sm">${rangeText}</strong>
     </div>
   `;
+
+  const metricCards = METRIC_FIELDS.map((metric) => {
+    const values = rows
+      .map((row) => Number(row[metric.key]))
+      .filter((value) => Number.isFinite(value));
+
+    if (!values.length) {
+      return `
+        <div class="stat-item">
+          <span class="stat-label">${metric.label}</span>
+          <span class="stat-sub">时间范围：${rangeText}</span>
+          <div class="stat-line"><span>平均</span><strong>--</strong></div>
+          <div class="stat-line"><span>最大</span><strong>--</strong></div>
+          <div class="stat-line"><span>最小</span><strong>--</strong></div>
+        </div>
+      `;
+    }
+
+    const sum = values.reduce((total, item) => total + item, 0);
+    const avg = sum / values.length;
+    const max = Math.max(...values);
+    const min = Math.min(...values);
+
+    return `
+      <div class="stat-item">
+        <span class="stat-label">${metric.label}</span>
+        <span class="stat-sub">时间范围：${rangeText}</span>
+        <div class="stat-line"><span>平均</span><strong>${formatNum(avg, metric.digits)}</strong></div>
+        <div class="stat-line"><span>最大</span><strong>${formatNum(max, metric.digits)}</strong></div>
+        <div class="stat-line"><span>最小</span><strong>${formatNum(min, metric.digits)}</strong></div>
+      </div>
+    `;
+  }).join('');
+
+  wrap.innerHTML = fixedCards + metricCards;
 }
 
 function renderTable(rows) {
@@ -153,11 +158,21 @@ function renderChart(rows) {
     return;
   }
 
-  const labels = [...rows].reverse().map((row) => row.created_at);
-  const phData = [...rows].reverse().map((row) => row.ph);
-  const tdsData = [...rows].reverse().map((row) => row.tds);
-  const codData = [...rows].reverse().map((row) => row.cod);
-  const temData = [...rows].reverse().map((row) => row.tem);
+  const orderedRows = [...rows].reverse();
+  const labels = orderedRows.map((row) => formatDisplayTime(row.created_at));
+  const datasets = METRIC_FIELDS.map((metric) => ({
+    label: metric.label,
+    data: orderedRows.map((row) => {
+      const value = Number(row[metric.key]);
+      return Number.isFinite(value) ? value : null;
+    }),
+    borderColor: metric.color,
+    backgroundColor: metric.color,
+    tension: 0.3,
+    pointRadius: 1,
+    fill: false,
+    spanGaps: true
+  }));
 
   if (chart) {
     chart.destroy();
@@ -167,36 +182,7 @@ function renderChart(rows) {
     type: 'line',
     data: {
       labels,
-      datasets: [
-        {
-          label: 'pH',
-          data: phData,
-          borderColor: '#2563eb',
-          tension: 0.35,
-          fill: false
-        },
-        {
-          label: 'TDS',
-          data: tdsData,
-          borderColor: '#10b981',
-          tension: 0.35,
-          fill: false
-        },
-        {
-          label: 'COD',
-          data: codData,
-          borderColor: '#f59e0b',
-          tension: 0.35,
-          fill: false
-        },
-        {
-          label: 'Tem',
-          data: temData,
-          borderColor: '#ef4444',
-          tension: 0.35,
-          fill: false
-        }
-      ]
+      datasets
     },
     options: {
       responsive: true,
@@ -204,6 +190,13 @@ function renderChart(rows) {
       plugins: {
         legend: {
           position: 'top'
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            maxTicksLimit: 10
+          }
         }
       }
     }
