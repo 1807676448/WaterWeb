@@ -87,6 +87,28 @@ async function initDb() {
       created_at TEXT NOT NULL
     )
   `);
+
+  await run(`
+    CREATE TABLE IF NOT EXISTS analysis_reports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      device_id TEXT,
+      model TEXT NOT NULL,
+      sample_count INTEGER NOT NULL,
+      message_markdown TEXT NOT NULL,
+      raw_data_json TEXT,
+      created_at TEXT NOT NULL
+    )
+  `);
+
+  await run(`
+    CREATE INDEX IF NOT EXISTS idx_analysis_reports_created_at
+    ON analysis_reports(created_at DESC)
+  `);
+
+  await run(`
+    CREATE INDEX IF NOT EXISTS idx_analysis_reports_device_id
+    ON analysis_reports(device_id)
+  `);
 }
 
 module.exports = {

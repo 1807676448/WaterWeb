@@ -19,6 +19,7 @@
 
   <div class="container">
     <div class="card">
+      <h3>查询条件</h3>
       <div class="row">
         <label>设备ID <input id="deviceId" placeholder="可选，如 device_001" /></label>
         <label>开始时间 <input id="startTime" type="datetime-local" /></label>
@@ -28,26 +29,46 @@
     </div>
 
     <div class="card">
-      <canvas id="lineChart" height="100"></canvas>
+      <h3>数据概览</h3>
+      <div class="stat-grid" id="summaryCards">
+        <div class="stat-item">
+          <span class="stat-label">样本总数</span>
+          <strong class="stat-value">0</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>趋势图（pH / TDS / COD / 温度）</h3>
+      <div class="chart-wrap">
+        <canvas id="lineChart"></canvas>
+      </div>
     </div>
 
     <div class="card">
       <h3>明细数据</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>时间</th>
-            <th>设备</th>
-            <th>TDS</th>
-            <th>COD</th>
-            <th>TOC</th>
-            <th>UV254</th>
-            <th>pH</th>
-            <th>Tem</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-      </table>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>时间</th>
+              <th>设备</th>
+              <th>TDS</th>
+              <th>COD</th>
+              <th>TOC</th>
+              <th>UV254</th>
+              <th>pH</th>
+              <th>Tem</th>
+              <th>Tur</th>
+              <th>air_temp</th>
+              <th>air_hum</th>
+              <th>pressure</th>
+              <th>altitude</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 

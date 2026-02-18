@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DeepSeek 分析</title>
   <link rel="stylesheet" href="/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
 </head>
 <body>
   <header>
@@ -21,12 +23,14 @@
       <div class="row">
         <label>设备ID <input id="deviceId" placeholder="可选，留空分析所有设备最近10次" /></label>
         <button id="analyzeBtn">请求 DeepSeek 分析</button>
+        <button id="loadLatestBtn" class="secondary">加载最近分析</button>
       </div>
     </div>
 
     <div class="card">
-      <h3>分析结果</h3>
-      <pre id="result">点击按钮后显示分析内容</pre>
+      <h3>分析结果（支持 Markdown）</h3>
+      <div class="analysis-meta" id="analysisMeta">暂无历史分析</div>
+      <div id="result" class="markdown-body">点击按钮后显示分析内容</div>
     </div>
   </div>
 

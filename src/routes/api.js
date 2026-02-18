@@ -1,7 +1,7 @@
 const express = require('express');
 const { listMetrics, listDevices } = require('../services/deviceService');
 const { handleDeviceCommand } = require('../services/mqttService');
-const { analyzeLatestWaterQuality } = require('../services/deepseekService');
+const { analyzeLatestWaterQuality, latestAnalysisReport } = require('../services/deepseekService');
 
 const router = express.Router();
 
@@ -56,6 +56,16 @@ router.post('/analysis/deepseek', async (req, res) => {
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: `DeepSeek 分析失败: ${error.message}` });
+  }
+});
+
+router.get('/analysis/deepseek/latest', async (req, res) => {
+  try {
+    const { device_id: deviceId } = req.query;
+    const report = await latestAnalysisReport(deviceId || '');
+    res.json({ data: report });
+  } catch (error) {
+    res.status(500).json({ error: `查询分析历史失败: ${error.message}` });
   }
 });
 
