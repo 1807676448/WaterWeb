@@ -21,10 +21,17 @@
     <div class="card">
       <h3>查询条件</h3>
       <div class="row">
-        <label>设备ID <input id="deviceId" placeholder="可选，如 device_001" /></label>
+        <label>设备ID
+          <select id="deviceId">
+            <option value="">全部设备</option>
+          </select>
+        </label>
         <label>开始时间 <input id="startTime" type="datetime-local" /></label>
         <label>结束时间 <input id="endTime" type="datetime-local" /></label>
         <button id="queryBtn">查询范围数据</button>
+        <button id="range1h" class="secondary" type="button">最近1小时</button>
+        <button id="range24h" class="secondary" type="button">最近24小时</button>
+        <button id="range7d" class="secondary" type="button">最近7天</button>
       </div>
     </div>
 

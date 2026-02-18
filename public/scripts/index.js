@@ -1,18 +1,61 @@
 let chart;
 
 const METRIC_FIELDS = [
-  { key: 'tds', label: 'TDS', digits: 2, color: '#2563eb' },
-  { key: 'cod', label: 'COD', digits: 2, color: '#10b981' },
-  { key: 'toc', label: 'TOC', digits: 2, color: '#f59e0b' },
-  { key: 'uv254', label: 'UV254', digits: 4, color: '#a855f7' },
-  { key: 'ph', label: 'pH', digits: 2, color: '#0ea5e9' },
-  { key: 'tem', label: 'Tem', digits: 2, color: '#ef4444' },
-  { key: 'tur', label: 'Tur', digits: 2, color: '#f97316' },
-  { key: 'air_temp', label: 'air_temp', digits: 2, color: '#14b8a6' },
-  { key: 'air_hum', label: 'air_hum', digits: 2, color: '#22c55e' },
-  { key: 'pressure', label: 'pressure', digits: 2, color: '#6366f1' },
-  { key: 'altitude', label: 'altitude', digits: 2, color: '#ec4899' }
+  { key: 'tds', label: '总溶解固体 TDS', digits: 2, color: '#2563eb' },
+  { key: 'cod', label: '化学需氧量 COD', digits: 2, color: '#10b981' },
+  { key: 'toc', label: '总有机碳 TOC', digits: 2, color: '#f59e0b' },
+  { key: 'uv254', label: '紫外吸收 UV254', digits: 4, color: '#a855f7' },
+  { key: 'ph', label: '酸碱度 pH', digits: 2, color: '#0ea5e9' },
+  { key: 'tem', label: '水温 Tem', digits: 2, color: '#ef4444' },
+  { key: 'tur', label: '浊度 Tur', digits: 2, color: '#f97316' },
+  { key: 'air_temp', label: '气温', digits: 2, color: '#14b8a6' },
+  { key: 'air_hum', label: '空气湿度', digits: 2, color: '#22c55e' },
+  { key: 'pressure', label: '气压', digits: 2, color: '#6366f1' },
+  { key: 'altitude', label: '海拔', digits: 2, color: '#ec4899' }
 ];
+
+function formatDateTimeLocal(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hour = String(date.getHours()).padStart(2, '0');
+  const minute = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hour}:${minute}`;
+}
+
+function initDefaultTimeRange() {
+  const end = new Date();
+  const start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
+  document.getElementById('startTime').value = formatDateTimeLocal(start);
+  document.getElementById('endTime').value = formatDateTimeLocal(end);
+}
+
+function setQuickRange(hours) {
+  const end = new Date();
+  const start = new Date(end.getTime() - hours * 60 * 60 * 1000);
+  document.getElementById('startTime').value = formatDateTimeLocal(start);
+  document.getElementById('endTime').value = formatDateTimeLocal(end);
+  queryData();
+}
+
+async function loadDeviceOptions() {
+  const select = document.getElementById('deviceId');
+  const response = await fetch('/api/devices');
+  const result = await response.json();
+  const rows = Array.isArray(result.data) ? result.data : [];
+
+  const seen = new Set();
+  for (const row of rows) {
+    const id = String(row.device_id || '').trim();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+
+    const option = document.createElement('option');
+    option.value = id;
+    option.textContent = id;
+    select.appendChild(option);
+  }
+}
 
 function formatDateForApi(dateText) {
   if (!dateText) return '';
@@ -220,4 +263,14 @@ async function queryData() {
 }
 
 document.getElementById('queryBtn').addEventListener('click', queryData);
-queryData();
+document.getElementById('range1h').addEventListener('click', () => setQuickRange(1));
+document.getElementById('range24h').addEventListener('click', () => setQuickRange(24));
+document.getElementById('range7d').addEventListener('click', () => setQuickRange(24 * 7));
+
+async function initPage() {
+  initDefaultTimeRange();
+  await loadDeviceOptions();
+  await queryData();
+}
+
+initPage();
