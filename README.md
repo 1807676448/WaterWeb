@@ -375,3 +375,26 @@ devices/device_002/down {"timestamp":1760000000000}
 - 阿里云安全组已放行 `1883/tcp`
 - 平台服务已启动：`sudo systemctl status water-quality-platform`
 - 设备持续上报 `status`，否则设备页 3 分钟后显示离线
+
+## 9. 性能与稳定性优化（已内置）
+
+为解决高频刷新下的 `504 Gateway Time-out` 与服务卡顿，工程已包含以下优化：
+
+- SQLite 启用 `WAL`、`busy_timeout`，降低读写锁冲突
+- 水质表增加索引：`created_at`、`(device_id, created_at)`
+- 指标查询 `limit` 设置上限（最大 300）
+- 实时刷新模式自动使用较小查询量（前端默认 120 条）
+- 前端数据签名未变化时跳过重绘，降低图表渲染负载
+
+### 9.1 线上建议
+
+- 尽量避免同时打开过多监控页面
+- 若服务器规格较低，建议把前端刷新间隔从 `3s` 调整为 `5s` 或 `10s`
+- 若出现 504，请优先检查：
+
+```bash
+sudo systemctl status water-quality-platform -l --no-pager
+sudo journalctl -u water-quality-platform -n 120 --no-pager
+curl -m 5 -i http://127.0.0.1:3000/health
+curl -m 5 -i "http://127.0.0.1:3000/api/metrics?limit=10"
+```

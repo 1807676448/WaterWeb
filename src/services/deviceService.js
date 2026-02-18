@@ -137,6 +137,7 @@ async function listDevices() {
 }
 
 async function listMetrics({ deviceId, start, end, limit = 200 }) {
+  const safeLimit = Math.min(Math.max(Number(limit) || 200, 1), 300);
   const conditions = [];
   const params = [];
 
@@ -154,7 +155,7 @@ async function listMetrics({ deviceId, start, end, limit = 200 }) {
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-  params.push(limit);
+  params.push(safeLimit);
 
   return all(
     `SELECT id, device_id, tds, cod, toc, uv254, ph, tem, tur, air_temp, air_hum, pressure, altitude, raw_json, created_at

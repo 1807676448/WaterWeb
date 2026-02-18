@@ -10,6 +10,13 @@ if (!fs.existsSync(dbDir)) {
 
 const db = new sqlite3.Database(config.dbPath);
 
+db.serialize(() => {
+  db.run('PRAGMA journal_mode = WAL');
+  db.run('PRAGMA synchronous = NORMAL');
+  db.run('PRAGMA temp_store = MEMORY');
+  db.run('PRAGMA busy_timeout = 5000');
+});
+
 function run(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.run(sql, params, function onRun(err) {
@@ -68,6 +75,16 @@ async function initDb() {
   `);
 
   await run(`
+    CREATE INDEX IF NOT EXISTS idx_water_quality_created_at
+    ON water_quality(created_at DESC)
+  `);
+
+  await run(`
+    CREATE INDEX IF NOT EXISTS idx_water_quality_device_created
+    ON water_quality(device_id, created_at DESC)
+  `);
+
+  await run(`
     CREATE TABLE IF NOT EXISTS devices (
       device_id TEXT PRIMARY KEY,
       status TEXT DEFAULT 'offline',
@@ -75,6 +92,11 @@ async function initDb() {
       last_seen TEXT,
       updated_at TEXT NOT NULL
     )
+  `);
+
+  await run(`
+    CREATE INDEX IF NOT EXISTS idx_devices_updated_at
+    ON devices(updated_at DESC)
   `);
 
   await run(`

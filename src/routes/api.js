@@ -8,11 +8,12 @@ const router = express.Router();
 router.get('/metrics', async (req, res) => {
   try {
     const { device_id: deviceId, start, end, limit } = req.query;
+    const parsedLimit = Number(limit || 120);
     const data = await listMetrics({
       deviceId,
       start,
       end,
-      limit: Number(limit || 200)
+      limit: Math.min(Math.max(Number.isFinite(parsedLimit) ? parsedLimit : 120, 1), 300)
     });
     res.json({ data });
   } catch (error) {

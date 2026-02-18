@@ -1,6 +1,8 @@
 let chart;
 const REFRESH_INTERVAL_MS = 3000;
 let querying = false;
+let lastDataSignature = '';
+let lastQueryErrorAt = 0;
 
 const METRIC_FIELDS = [
   { key: 'tds', label: '总溶解固体 TDS', digits: 2, color: '#2563eb' },
@@ -285,16 +287,35 @@ async function queryData() {
   if (deviceId) query.set('device_id', deviceId);
   if (start) query.set('start', start);
   if (end) query.set('end', end);
-  query.set('limit', '500');
+  query.set('limit', isRealtimeMode() ? '120' : '200');
 
   try {
     const response = await fetch(`/api/metrics?${query.toString()}`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
     const result = await response.json();
     const data = result.data || [];
+
+    const signature = data.length
+      ? `${data[0].id || data[0].created_at}|${data.length}|${data[0].device_id || ''}`
+      : 'empty';
+
+    if (signature === lastDataSignature) {
+      return;
+    }
+
+    lastDataSignature = signature;
 
     renderSummary(data);
     renderTable(data);
     renderChart(data);
+  } catch (error) {
+    const now = Date.now();
+    if (now - lastQueryErrorAt > 15000) {
+      lastQueryErrorAt = now;
+      console.error('[dashboard] queryData error:', error.message);
+    }
   } finally {
     querying = false;
   }
