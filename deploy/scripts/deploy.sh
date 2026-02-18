@@ -33,9 +33,13 @@ sudo systemctl enable ${SERVICE_NAME}
 sudo systemctl restart ${SERVICE_NAME}
 
 echo "[6/7] 安装 Nginx 反向代理配置"
-sudo cp ${APP_DIR}/deploy/nginx/water-quality-platform.conf /etc/nginx/conf.d/${APP_NAME}.conf
+sudo cp ${APP_DIR}/deploy/nginx/water-quality-platform.conf /etc/nginx/conf.d/00-${APP_NAME}.conf
+sudo rm -f /etc/nginx/conf.d/${APP_NAME}.conf
 if [ -f "/etc/nginx/sites-enabled/default" ]; then
   sudo rm -f /etc/nginx/sites-enabled/default
+fi
+if [ -f "/etc/nginx/conf.d/default.conf" ]; then
+  sudo rm -f /etc/nginx/conf.d/default.conf
 fi
 sudo nginx -t
 sudo systemctl restart nginx
