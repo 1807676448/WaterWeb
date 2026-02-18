@@ -1,4 +1,6 @@
 let chart;
+const REFRESH_INTERVAL_MS = 3000;
+let querying = false;
 
 const METRIC_FIELDS = [
   { key: 'tds', label: '总溶解固体 TDS', digits: 2, color: '#2563eb' },
@@ -243,6 +245,11 @@ function renderChart(rows) {
 }
 
 async function queryData() {
+  if (querying) {
+    return;
+  }
+  querying = true;
+
   const deviceId = document.getElementById('deviceId').value.trim();
   const start = formatDateForApi(document.getElementById('startTime').value);
   const end = formatDateForApi(document.getElementById('endTime').value);
@@ -253,13 +260,17 @@ async function queryData() {
   if (end) query.set('end', end);
   query.set('limit', '500');
 
-  const response = await fetch(`/api/metrics?${query.toString()}`);
-  const result = await response.json();
-  const data = result.data || [];
+  try {
+    const response = await fetch(`/api/metrics?${query.toString()}`);
+    const result = await response.json();
+    const data = result.data || [];
 
-  renderSummary(data);
-  renderTable(data);
-  renderChart(data);
+    renderSummary(data);
+    renderTable(data);
+    renderChart(data);
+  } finally {
+    querying = false;
+  }
 }
 
 document.getElementById('queryBtn').addEventListener('click', queryData);
@@ -271,6 +282,12 @@ async function initPage() {
   initDefaultTimeRange();
   await loadDeviceOptions();
   await queryData();
+  setInterval(() => {
+    if (document.hidden) {
+      return;
+    }
+    queryData();
+  }, REFRESH_INTERVAL_MS);
 }
 
 initPage();

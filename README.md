@@ -308,3 +308,70 @@ sudo ss -ltnp | grep 3000 || true
 cd /home/admin/WaterWeb
 bash deploy/scripts/deploy.sh
 ```
+
+## 8. MQTT 本地连接与订阅说明
+
+本节用于“本地设备（开发机） ↔ 阿里云服务器 MQTT Broker”的联调。
+
+### 8.1 连接关系
+
+- 服务器上的平台服务（Node）建议连接本机 Broker：`MQTT_URL=mqtt://127.0.0.1:1883`
+- 本地设备（开发机）连接服务器公网地址：`mqtt://106.15.53.24:1883`
+
+> 若出现 `ECONNREFUSED 106.15.53.24:1883`，通常是 Broker 仅监听 `127.0.0.1` 或安全组未放行 `1883/tcp`。
+
+### 8.2 Topic 规范（当前工程默认）
+
+- 数据上报：`devices/{device_id}/up`
+- 状态心跳：`devices/{device_id}/status`
+- 指令入口：`devices/{device_id}/command`
+- 平台下行：`devices/{device_id}/down`
+
+示例设备 ID：`device_002`
+
+### 8.3 本地端发布（模拟设备）
+
+在本地开发机安装 `mosquitto-clients` 后执行。
+
+1) 上报水质数据：
+
+```bash
+mosquitto_pub -h 106.15.53.24 -p 1883 -t devices/device_002/up -m '{"id":"1","params":{"TDS":{"value":123},"COD":{"value":45},"TOC":{"value":1.2},"UV254":{"value":0.023},"pH":{"value":7.2},"Tem":{"value":22.5},"Tur":{"value":0.8},"air_temp":{"value":21.0},"air_hum":{"value":55},"pressure":{"value":1013},"altitude":{"value":30}}}'
+```
+
+2) 上报设备状态（建议每 60 秒一次）：
+
+```bash
+mosquitto_pub -h 106.15.53.24 -p 1883 -t devices/device_002/status -m '{"device_id":"device_002","status":"online","runtime_seconds":3600}'
+```
+
+### 8.4 本地端订阅（接收服务器下发）
+
+订阅下行 Topic：
+
+```bash
+mosquitto_sub -h 106.15.53.24 -p 1883 -t devices/device_002/down -v
+```
+
+### 8.5 触发时间戳下发验证
+
+在任意可访问平台 API 的环境执行：
+
+```bash
+curl -X POST http://106.15.53.24/api/iot/command \
+  -H "Content-Type: application/json" \
+  -d '{"device_id":"device_002","command":"time"}'
+```
+
+如果链路正常，`mosquitto_sub` 窗口会收到类似：
+
+```json
+devices/device_002/down {"timestamp":1760000000000}
+```
+
+### 8.6 联调检查清单
+
+- 服务器 `1883/tcp` 已监听在 `0.0.0.0`：`sudo ss -ltnp | grep 1883`
+- 阿里云安全组已放行 `1883/tcp`
+- 平台服务已启动：`sudo systemctl status water-quality-platform`
+- 设备持续上报 `status`，否则设备页 3 分钟后显示离线
