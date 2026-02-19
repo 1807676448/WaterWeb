@@ -67,7 +67,13 @@ function renderList(rows) {
 
   listEl.innerHTML = rows.map((item) => `
     <article class="upload-item">
-      <img src="${escapeHtml(item.public_url)}" alt="${escapeHtml(item.file_name || 'upload-image')}" loading="lazy" />
+      <img
+        class="js-upload-zoom"
+        src="${escapeHtml(item.public_url)}"
+        alt="${escapeHtml(item.file_name || 'upload-image')}"
+        data-full-url="${escapeHtml(item.public_url)}"
+        loading="lazy"
+      />
       <div class="upload-item-content">
         <div class="upload-item-title">${escapeHtml(item.file_name || '--')}</div>
         <div class="upload-item-desc">${escapeHtml(item.description || '（无说明）')}</div>
@@ -75,6 +81,25 @@ function renderList(rows) {
       </div>
     </article>
   `).join('');
+}
+
+function openZoomModal(url, altText) {
+  const modal = document.getElementById('imageZoomModal');
+  const image = document.getElementById('imageZoomTarget');
+
+  image.src = url;
+  image.alt = altText || 'zoom-preview';
+  modal.classList.add('is-open');
+  modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeZoomModal() {
+  const modal = document.getElementById('imageZoomModal');
+  const image = document.getElementById('imageZoomTarget');
+
+  image.src = '';
+  modal.classList.remove('is-open');
+  modal.setAttribute('aria-hidden', 'true');
 }
 
 async function loadRecentUploads() {
@@ -144,5 +169,28 @@ document.getElementById('imageFile').addEventListener('change', (event) => {
   const file = event.target.files?.[0];
   renderPreview(file);
 });
+
+document.getElementById('uploadList').addEventListener('click', (event) => {
+  const target = event.target.closest('.js-upload-zoom');
+  if (!target) {
+    return;
+  }
+
+  const fullUrl = target.getAttribute('data-full-url') || target.getAttribute('src') || '';
+  if (!fullUrl) {
+    return;
+  }
+
+  openZoomModal(fullUrl, target.getAttribute('alt') || 'zoom-preview');
+});
+
+document.getElementById('imageZoomClose').addEventListener('click', closeZoomModal);
+document.getElementById('imageZoomBackdrop').addEventListener('click', closeZoomModal);
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    closeZoomModal();
+  }
+});
+
 document.getElementById('uploadBtn').addEventListener('click', submitUpload);
 loadRecentUploads();

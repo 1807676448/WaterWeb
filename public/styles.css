@@ -444,6 +444,7 @@ tbody tr:nth-child(even) {
   border-radius: 8px;
   border: 1px solid #cbd5e1;
   background: #fff;
+  cursor: zoom-in;
 }
 
 .upload-item-title {
@@ -472,6 +473,59 @@ tbody tr:nth-child(even) {
   padding: 16px 8px;
 }
 
+.image-zoom-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: none;
+}
+
+.image-zoom-modal.is-open {
+  display: block;
+}
+
+.image-zoom-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.78);
+}
+
+.image-zoom-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(92vw, 1000px);
+  margin: 3vh auto;
+  max-height: 94vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.image-zoom-dialog img {
+  width: auto;
+  max-width: 100%;
+  max-height: 92vh;
+  border-radius: 10px;
+  display: block;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.5);
+}
+
+.image-zoom-close {
+  position: absolute;
+  top: -18px;
+  right: -18px;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 0;
+  background: rgba(15, 23, 42, 0.9);
+  color: #fff;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
 @media (max-width: 768px) {
   .container {
     padding: 14px;
@@ -492,5 +546,15 @@ tbody tr:nth-child(even) {
 
   .upload-item img {
     height: 180px;
+  }
+
+  .image-zoom-dialog {
+    width: 96vw;
+    margin: 4vh auto;
+  }
+
+  .image-zoom-close {
+    top: -10px;
+    right: 0;
   }
 }

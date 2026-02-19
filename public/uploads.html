@@ -43,6 +43,14 @@
     </div>
   </div>
 
+  <div id="imageZoomModal" class="image-zoom-modal" aria-hidden="true">
+    <div id="imageZoomBackdrop" class="image-zoom-backdrop"></div>
+    <div class="image-zoom-dialog" role="dialog" aria-modal="true" aria-label="图片放大查看">
+      <button id="imageZoomClose" type="button" class="image-zoom-close" aria-label="关闭">×</button>
+      <img id="imageZoomTarget" src="" alt="zoom-preview" />
+    </div>
+  </div>
+
   <script src="/scripts/uploads.js"></script>
 </body>
 </html>
