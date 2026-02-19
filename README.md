@@ -197,6 +197,33 @@ curl -X POST http://127.0.0.1:3000/api/iot/command \
 curl "http://127.0.0.1:3000/api/metrics?device_id=device_002&limit=50"
 ```
 
+### 5.3 Python 模拟本地 WiFi 设备上传图片
+
+项目根目录新增脚本：`wifi_image_uploader.py`
+
+功能：
+
+- 可通过文件选择弹窗选择本地图片；
+- 或通过 `--file` 直接指定本地图片路径；
+- 按当前服务端协议请求 `POST /upload`（二进制 + `X-File-Name`）。
+
+示例 1（弹窗选图）：
+
+```bash
+python wifi_image_uploader.py --server-base-url http://127.0.0.1:3000 --token CHANGE_TO_STRONG_TOKEN --description "本地WiFi设备模拟上传"
+```
+
+示例 2（命令行指定图片）：
+
+```bash
+python wifi_image_uploader.py --file "C:\\Users\\admin\\Pictures\\test.jpg" --server-base-url http://127.0.0.1:3000 --token CHANGE_TO_STRONG_TOKEN --description "测试图片"
+```
+
+可选参数：
+
+- `--upload-path`：默认 `/upload`
+- `--timeout`：默认 `20` 秒
+
 ## 6. 备注
 
 - 数据库文件默认保存在 `data/water_quality.db`

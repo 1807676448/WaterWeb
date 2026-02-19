@@ -29,6 +29,19 @@ function verifyUploadToken(req) {
   return req.get('X-Upload-Token') === config.upload.token;
 }
 
+function parseUploadDescription(req) {
+  const encoded = String(req.get('X-Description-Encoded') || '').trim();
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded);
+    } catch (error) {
+      return encoded;
+    }
+  }
+
+  return String(req.get('X-Description') || '').trim();
+}
+
 router.get('/metrics', async (req, res) => {
   try {
     const { device_id: deviceId, start, end, limit } = req.query;
@@ -161,7 +174,7 @@ router.post('/upload', express.raw({ type: '*/*', limit: config.upload.maxConten
       buffer: body,
       originalName: fileName,
       contentType: req.get('Content-Type') || 'application/octet-stream',
-      description: req.get('X-Description') || ''
+      description: parseUploadDescription(req)
     });
     await pruneOverflow();
 
