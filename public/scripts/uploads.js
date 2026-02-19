@@ -20,6 +20,44 @@ function setMessage(text, isError = false) {
   msgEl.className = isError ? 'upload-msg upload-msg-error' : 'upload-msg upload-msg-ok';
 }
 
+let previewObjectUrl = '';
+
+function formatFileSize(bytes) {
+  const value = Number(bytes) || 0;
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function clearPreview() {
+  if (previewObjectUrl) {
+    URL.revokeObjectURL(previewObjectUrl);
+    previewObjectUrl = '';
+  }
+  const previewEl = document.getElementById('uploadPreview');
+  previewEl.className = 'upload-preview upload-preview-empty';
+  previewEl.textContent = '请选择图片后预览';
+}
+
+function renderPreview(file) {
+  if (!file) {
+    clearPreview();
+    return;
+  }
+
+  if (previewObjectUrl) {
+    URL.revokeObjectURL(previewObjectUrl);
+  }
+
+  previewObjectUrl = URL.createObjectURL(file);
+  const previewEl = document.getElementById('uploadPreview');
+  previewEl.className = 'upload-preview';
+  previewEl.innerHTML = `
+    <img src="${previewObjectUrl}" alt="preview" />
+    <div class="upload-preview-meta">文件：${escapeHtml(file.name)} ｜ 大小：${formatFileSize(file.size)}</div>
+  `;
+}
+
 function renderList(rows) {
   const listEl = document.getElementById('uploadList');
   if (!rows.length) {
@@ -93,6 +131,7 @@ async function submitUpload() {
     setMessage('上传成功');
     fileInput.value = '';
     descInput.value = '';
+    clearPreview();
     await loadRecentUploads();
   } catch (error) {
     setMessage(`上传失败：${error.message}`, true);
@@ -101,5 +140,9 @@ async function submitUpload() {
   }
 }
 
+document.getElementById('imageFile').addEventListener('change', (event) => {
+  const file = event.target.files?.[0];
+  renderPreview(file);
+});
 document.getElementById('uploadBtn').addEventListener('click', submitUpload);
 loadRecentUploads();
