@@ -26,12 +26,15 @@ import json
 import mimetypes
 import os
 import re
+import socket
 import sys
 import traceback
 import urllib.error
 import urllib.parse
 import urllib.request
 import unicodedata
+
+DEFAULT_SERVER_BASE_URL = 'http://106.15.53.24:3000'
 
 
 def choose_image_file():
@@ -186,7 +189,7 @@ def parse_args():
   """定义并解析命令行参数。"""
   parser = argparse.ArgumentParser(description='模拟本地 WiFi 设备上传图片到服务器')
   parser.add_argument('--file', help='本地图片路径；不传则弹窗选择')
-  parser.add_argument('--server-base-url', default='http://127.0.0.1:3000', help='服务器基础地址')
+  parser.add_argument('--server-base-url', default=DEFAULT_SERVER_BASE_URL, help=f'服务器基础地址（默认 {DEFAULT_SERVER_BASE_URL}）')
   parser.add_argument('--upload-path', default='/upload', help='上传接口路径（默认 /upload）')
   parser.add_argument('--token', default='', help='上传令牌，对应服务端 UPLOAD_TOKEN')
   parser.add_argument('--description', default='', help='图片说明，透传到 X-Description')
@@ -217,6 +220,7 @@ def main():
     return 1
 
   print(f'准备上传: {image_path}')
+  print(f'请求地址: {build_upload_url(args.server_base_url, args.upload_path)}')
   try:
     # 发起上传
     result = upload_image(
@@ -249,6 +253,11 @@ def main():
   except urllib.error.URLError as error:
     # URLError 主要是网络可达性问题（连接失败、域名解析失败等）。
     print(f'连接失败: {error.reason}')
+    return 3
+  except (TimeoutError, socket.timeout) as error:
+    # 超时场景单独处理，便于快速判断是链路慢还是服务器响应慢。
+    print(f'连接超时: {error}')
+    print('建议：增大 --timeout（如 60/120），并检查服务器端口与防火墙策略。')
     return 3
   except Exception as error:
     # 兜底异常分支，打印堆栈便于定位。

@@ -5,7 +5,9 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node src/server.js"
+    "dev": "node src/server.js",
+    "db:clear": "node scripts/clear-db.js",
+    "db:clear:all": "node scripts/clear-db.js --with-files"
   },
   "dependencies": {
     "axios": "^1.11.0",

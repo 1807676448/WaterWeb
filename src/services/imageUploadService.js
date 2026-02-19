@@ -3,9 +3,10 @@ const fsp = require('fs/promises');
 const path = require('path');
 const crypto = require('crypto');
 const config = require('../config');
-const { run, all } = require('../db');
+const { run, all, get } = require('../db');
 
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp']);
+let pruningPromise = null;
 
 function ensureDirSync(dirPath) {
   if (!fs.existsSync(dirPath)) {
@@ -81,18 +82,26 @@ async function writeImageBuffer({ buffer, originalName, contentType, description
 
 async function pruneOverflow() {
   const max = config.upload.maxStoredImages;
+  const totalRow = await get('SELECT COUNT(1) AS total FROM image_uploads');
+  const total = Number(totalRow?.total || 0);
+  if (total <= max) {
+    return { removed: 0 };
+  }
+
+  const overflow = total - max;
   const rows = await all(
     `SELECT id, file_path
      FROM image_uploads
-     ORDER BY datetime(created_at) DESC, id DESC
-     LIMIT -1 OFFSET ?`,
-    [max]
+     ORDER BY id ASC
+     LIMIT ?`,
+    [overflow]
   );
 
   if (!rows.length) {
     return { removed: 0 };
   }
 
+  const deleteIds = [];
   for (const row of rows) {
     try {
       await fsp.unlink(row.file_path);
@@ -101,10 +110,32 @@ async function pruneOverflow() {
         throw error;
       }
     }
-    await run('DELETE FROM image_uploads WHERE id = ?', [row.id]);
+    deleteIds.push(row.id);
+  }
+
+  if (deleteIds.length) {
+    const placeholders = deleteIds.map(() => '?').join(',');
+    await run(`DELETE FROM image_uploads WHERE id IN (${placeholders})`, deleteIds);
   }
 
   return { removed: rows.length };
+}
+
+function triggerPruneIfNeeded() {
+  if (pruningPromise) {
+    return pruningPromise;
+  }
+
+  pruningPromise = pruneOverflow()
+    .catch((error) => {
+      console.error('[upload] pruneOverflow error:', error.message);
+      return { removed: 0 };
+    })
+    .finally(() => {
+      pruningPromise = null;
+    });
+
+  return pruningPromise;
 }
 
 async function listRecentUploads(limit = config.upload.recentLimit) {
@@ -112,7 +143,7 @@ async function listRecentUploads(limit = config.upload.recentLimit) {
   const rows = await all(
     `SELECT id, file_name, description, content_type, file_size, file_path, created_at
      FROM image_uploads
-     ORDER BY datetime(created_at) DESC, id DESC
+     ORDER BY id DESC
      LIMIT ?`,
     [safeLimit]
   );
@@ -132,5 +163,6 @@ module.exports = {
   ensureDirSync,
   writeImageBuffer,
   pruneOverflow,
+  triggerPruneIfNeeded,
   listRecentUploads
 };

@@ -224,6 +224,32 @@ python wifi_image_uploader.py --file "C:\\Users\\admin\\Pictures\\test.jpg" --se
 - `--upload-path`：默认 `/upload`
 - `--timeout`：默认 `20` 秒
 
+### 5.4 清空数据库指令（服务器）
+
+建议先停止服务再执行，避免与在线写入并发：
+
+```bash
+sudo systemctl stop water-quality-platform
+```
+
+仅清空数据库业务数据（保留表结构）：
+
+```bash
+npm run db:clear
+```
+
+清空数据库并同时删除上传目录中的图片文件：
+
+```bash
+npm run db:clear:all
+```
+
+执行后可重新启动服务：
+
+```bash
+sudo systemctl start water-quality-platform
+```
+
 ## 6. 备注
 
 - 数据库文件默认保存在 `data/water_quality.db`

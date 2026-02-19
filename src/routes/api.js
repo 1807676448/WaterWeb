@@ -10,7 +10,7 @@ const { handleDeviceCommand } = require('../services/mqttService');
 const { analyzeLatestWaterQuality, latestAnalysisReport } = require('../services/deepseekService');
 const {
   writeImageBuffer,
-  pruneOverflow,
+  triggerPruneIfNeeded,
   listRecentUploads
 } = require('../services/imageUploadService');
 
@@ -148,7 +148,7 @@ router.post('/uploads', upload.single('image'), async (req, res) => {
       contentType: req.file.mimetype,
       description: req.body?.description || ''
     });
-    await pruneOverflow();
+    triggerPruneIfNeeded();
 
     res.status(201).json({ ok: true, data: created });
   } catch (error) {
@@ -176,7 +176,7 @@ router.post('/upload', express.raw({ type: '*/*', limit: config.upload.maxConten
       contentType: req.get('Content-Type') || 'application/octet-stream',
       description: parseUploadDescription(req)
     });
-    await pruneOverflow();
+    triggerPruneIfNeeded();
 
     res.status(201).json({ ok: true, data: created });
   } catch (error) {
