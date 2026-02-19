@@ -1,4 +1,6 @@
 const express = require('express');
+const multer = require('multer');
+const config = require('../config');
 const {
   listMetrics,
   listDevices,
@@ -6,8 +8,26 @@ const {
 } = require('../services/deviceService');
 const { handleDeviceCommand } = require('../services/mqttService');
 const { analyzeLatestWaterQuality, latestAnalysisReport } = require('../services/deepseekService');
+const {
+  writeImageBuffer,
+  pruneOverflow,
+  listRecentUploads
+} = require('../services/imageUploadService');
 
 const router = express.Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: config.upload.maxContentLength
+  }
+});
+
+function verifyUploadToken(req) {
+  if (!config.upload.token) {
+    return true;
+  }
+  return req.get('X-Upload-Token') === config.upload.token;
+}
 
 router.get('/metrics', async (req, res) => {
   try {
@@ -85,6 +105,69 @@ router.get('/analysis/deepseek/latest', async (req, res) => {
     res.json({ data: report });
   } catch (error) {
     res.status(500).json({ error: `查询分析历史失败: ${error.message}` });
+  }
+});
+
+router.get('/uploads/recent', async (req, res) => {
+  try {
+    const rows = await listRecentUploads(config.upload.recentLimit);
+    res.json({ data: rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/uploads', upload.single('image'), async (req, res) => {
+  try {
+    if (!verifyUploadToken(req)) {
+      res.status(401).json({ error: 'invalid token' });
+      return;
+    }
+
+    if (!req.file) {
+      res.status(400).json({ error: '图片不能为空' });
+      return;
+    }
+
+    const created = await writeImageBuffer({
+      buffer: req.file.buffer,
+      originalName: req.file.originalname,
+      contentType: req.file.mimetype,
+      description: req.body?.description || ''
+    });
+    await pruneOverflow();
+
+    res.status(201).json({ ok: true, data: created });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.post('/upload', express.raw({ type: '*/*', limit: config.upload.maxContentLength }), async (req, res) => {
+  try {
+    if (!verifyUploadToken(req)) {
+      res.status(401).json({ error: 'invalid token' });
+      return;
+    }
+
+    const fileName = String(req.get('X-File-Name') || '').trim();
+    if (!fileName) {
+      res.status(400).json({ error: 'X-File-Name 不能为空' });
+      return;
+    }
+
+    const body = Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body || '');
+    const created = await writeImageBuffer({
+      buffer: body,
+      originalName: fileName,
+      contentType: req.get('Content-Type') || 'application/octet-stream',
+      description: req.get('X-Description') || ''
+    });
+    await pruneOverflow();
+
+    res.status(201).json({ ok: true, data: created });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
   }
 });
 

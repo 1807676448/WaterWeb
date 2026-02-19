@@ -6,6 +6,7 @@
 - 接收设备/平台指令并向设备下发当前时间戳
 - 设备管理页面展示设备状态与运行时长
 - DeepSeek 分析最近 10 次水质数据并输出 AI 结论
+- 图片上传页面支持“图片 + 说明”提交，并展示最近 10 次记录
 
 ## 1. 环境要求
 
@@ -37,6 +38,11 @@ cp .env.example .env
 - `MQTT_COMMAND_TOPIC`：设备命令主题（默认 `devices/+/command`）
 - `MQTT_DOWNLINK_TOPIC_TEMPLATE`：下发主题模板（默认 `devices/{device_id}/down`）
 - `DEEPSEEK_API_KEY`：DeepSeek Key（可选）
+- `UPLOAD_TOKEN`：上传鉴权令牌（可选，建议设置）
+- `UPLOAD_DIR`：图片落盘目录（默认 `./data/uploads`）
+- `MAX_CONTENT_LENGTH`：单次上传大小限制（字节，默认 10MB）
+- `MAX_STORED_IMAGES`：最多保留图片数（默认 100）
+- `RECENT_IMAGE_LIMIT`：最近展示数量（默认 10）
 
 5. 启动服务：
 
@@ -50,6 +56,7 @@ npm run dev
 - 设备管理页：`http://服务器IP:3000/devices.html`
 - DeepSeek 分析页：`http://服务器IP:3000/deepseek.html`
 - 指令执行页：`http://服务器IP:3000/commands.html`
+- 图片上传页：`http://服务器IP:3000/uploads.html`
 
 ## 3. 功能说明
 
@@ -123,6 +130,32 @@ npm run dev
 {"device_id":"device_002"}
 ```
 
+### 3.5 图片上传与最近记录
+
+系统提供两种上传方式：
+
+- K230 协议上传：`POST /upload`（Body 为图片二进制）
+- 网页上传：`POST /uploads`（`multipart/form-data`）
+
+公共请求头：
+
+- `X-Upload-Token`：当服务端设置 `UPLOAD_TOKEN` 时必填
+
+K230 额外请求头：
+
+- `X-File-Name`：服务端保存的原始文件名
+- `X-Description`：图片说明（可选）
+
+查询最近记录：
+
+- `GET /uploads/recent`（固定返回最近 10 条）
+
+存储策略：
+
+- 数据库表：`image_uploads`
+- 文件保存在 `UPLOAD_DIR`
+- 总量超过 100 张时自动删除最旧图片（可通过 `MAX_STORED_IMAGES` 调整）
+
 ## 4. 主要目录
 
 ```text
@@ -139,11 +172,13 @@ public/
   index.html
   devices.html
   deepseek.html
+  uploads.html
   styles.css
   scripts/
     index.js
     devices.js
     deepseek.js
+    uploads.js
 ```
 
 ## 5. 测试接口示例

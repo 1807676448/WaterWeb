@@ -141,6 +141,23 @@ async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_analysis_reports_device_id
     ON analysis_reports(device_id)
   `);
+
+  await run(`
+    CREATE TABLE IF NOT EXISTS image_uploads (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      file_name TEXT NOT NULL,
+      description TEXT,
+      content_type TEXT,
+      file_size INTEGER NOT NULL,
+      file_path TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    )
+  `);
+
+  await run(`
+    CREATE INDEX IF NOT EXISTS idx_image_uploads_created_at
+    ON image_uploads(created_at DESC)
+  `);
 }
 
 module.exports = {

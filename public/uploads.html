@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>图片上传</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <h2>图片上传与说明</h2>
+    <nav>
+      <a href="/index.html">数据展示</a>
+      <a href="/devices.html">设备管理</a>
+      <a href="/deepseek.html">DeepSeek 分析</a>
+      <a href="/commands.html">指令执行</a>
+      <a class="active" href="/uploads.html">图片上传</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <h3>提交图片</h3>
+      <div class="row upload-form-row">
+        <label>图片文件
+          <input id="imageFile" type="file" accept="image/*" />
+        </label>
+        <label>图片说明
+          <textarea id="imageDesc" rows="3" placeholder="请输入图片对应说明（可选，最多500字符）"></textarea>
+        </label>
+        <label>上传令牌
+          <input id="uploadToken" type="text" placeholder="若服务端设置了 UPLOAD_TOKEN 则必填" />
+        </label>
+        <button id="uploadBtn" type="button">上传图片</button>
+      </div>
+      <div id="uploadMsg" class="upload-msg">等待上传</div>
+    </div>
+
+    <div class="card">
+      <h3>最近 10 次提交</h3>
+      <div id="uploadList" class="upload-list"></div>
+    </div>
+  </div>
+
+  <script src="/scripts/uploads.js"></script>
+</body>
+</html>
