@@ -192,7 +192,7 @@ def parse_args():
   parser.add_argument('--server-base-url', default=DEFAULT_SERVER_BASE_URL, help=f'服务器基础地址（默认 {DEFAULT_SERVER_BASE_URL}）')
   parser.add_argument('--upload-path', default='/upload', help='上传接口路径（默认 /upload）')
   parser.add_argument('--token', default='', help='上传令牌，对应服务端 UPLOAD_TOKEN')
-  parser.add_argument('--description', default='', help='图片说明，透传到 X-Description')
+  parser.add_argument('--description', default='', help='图片说明；不传则上传前可交互输入')
   parser.add_argument('--timeout', type=int, default=20, help='HTTP 超时时间（秒）')
   return parser.parse_args()
 
@@ -221,6 +221,19 @@ def main():
 
   print(f'准备上传: {image_path}')
   print(f'请求地址: {build_upload_url(args.server_base_url, args.upload_path)}')
+
+  # 支持上传前交互输入图片说明：
+  # - 传了 --description 则优先使用
+  # - 未传时允许用户手动输入，直接回车表示不附带说明
+  description = args.description
+  if not description:
+    try:
+      user_input = input('请输入图片描述（可选，直接回车跳过）: ').strip()
+      if user_input:
+        description = user_input
+    except (EOFError, KeyboardInterrupt):
+      print('未输入图片描述，继续上传。')
+
   try:
     # 发起上传
     result = upload_image(
@@ -228,7 +241,7 @@ def main():
       server_base_url=args.server_base_url,
       upload_path=args.upload_path,
       token=args.token,
-      description=args.description,
+      description=description,
       timeout=args.timeout
     )
 

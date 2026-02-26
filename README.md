@@ -78,7 +78,7 @@ npm run dev
     "air_temp": { "value": 21.0 },
     "air_hum": { "value": 55 },
     "pressure": { "value": 1013 },
-    "altitude": { "value": 30 }
+    "altitude": { "value": 30 } 
   }
 }
 ```

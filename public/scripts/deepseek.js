@@ -1,7 +1,25 @@
 function renderMarkdown(markdownText) {
   const resultEl = document.getElementById('result');
-  const html = window.marked.parse(markdownText || '暂无分析内容');
-  resultEl.innerHTML = window.DOMPurify.sanitize(html);
+  const rawText = markdownText || '暂无分析内容';
+
+  let html;
+  if (window.marked && typeof window.marked.parse === 'function') {
+    html = window.marked.parse(rawText);
+  } else {
+    const escaped = rawText
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>');
+    html = `<p>${escaped}</p>`;
+  }
+
+  if (window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
+    resultEl.innerHTML = window.DOMPurify.sanitize(html);
+    return;
+  }
+
+  resultEl.innerHTML = html;
 }
 
 function renderMeta(report) {
