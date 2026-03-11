@@ -158,6 +158,34 @@ async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_image_uploads_created_at
     ON image_uploads(created_at DESC)
   `);
+
+  await run(`
+    CREATE TABLE IF NOT EXISTS video_streams (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      device_id TEXT NOT NULL,
+      stream_name TEXT NOT NULL UNIQUE,
+      status TEXT NOT NULL DEFAULT 'online',
+      codec TEXT,
+      width INTEGER,
+      height INTEGER,
+      fps REAL,
+      bitrate_kbps INTEGER,
+      source TEXT,
+      last_heartbeat_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `);
+
+  await run(`
+    CREATE INDEX IF NOT EXISTS idx_video_streams_updated_at
+    ON video_streams(updated_at DESC)
+  `);
+
+  await run(`
+    CREATE INDEX IF NOT EXISTS idx_video_streams_device
+    ON video_streams(device_id, updated_at DESC)
+  `);
 }
 
 module.exports = {

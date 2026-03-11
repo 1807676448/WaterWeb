@@ -13,6 +13,10 @@ const {
   triggerPruneIfNeeded,
   listRecentUploads
 } = require('../services/imageUploadService');
+const {
+  upsertStreamHeartbeat,
+  listStreams
+} = require('../services/videoStreamService');
 
 const router = express.Router();
 const upload = multer({
@@ -127,6 +131,51 @@ router.get('/uploads/recent', async (req, res) => {
     res.json({ data: rows });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/video/streams', async (req, res) => {
+  try {
+    if (!config.video.enabled) {
+      res.status(503).json({ error: 'video module disabled' });
+      return;
+    }
+
+    const { device_id: deviceId, stream_name: streamName, limit } = req.query;
+    const rows = await listStreams({
+      deviceId,
+      streamName,
+      limit: Number(limit || 50)
+    });
+
+    res.json({
+      data: rows,
+      config: {
+        enabled: config.video.enabled,
+        heartbeat_offline_ms: config.video.heartbeatOfflineMs
+      }
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.post('/video/heartbeat', async (req, res) => {
+  try {
+    if (!config.video.enabled) {
+      res.status(503).json({ error: 'video module disabled' });
+      return;
+    }
+
+    if (!verifyUploadToken(req)) {
+      res.status(401).json({ error: 'invalid token' });
+      return;
+    }
+
+    const created = await upsertStreamHeartbeat(req.body || {});
+    res.status(201).json({ ok: true, data: created });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
   }
 });
 

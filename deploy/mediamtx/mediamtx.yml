@@ -1,0 +1,22 @@
+# MediaMTX config for WaterWeb video streaming.
+# K230 or simulator pushes RTSP to: rtsp://<server-ip>:8554/live/<device_id>
+logLevel: info
+
+rtsp: yes
+rtspAddress: :8554
+
+hls: yes
+hlsAddress: :8888
+hlsAlwaysRemux: yes
+
+webrtc: yes
+webrtcAddress: :8889
+# When server is behind Nginx or NAT, set this to your public host/IP.
+# webrtcAdditionalHosts: ["YOUR_SERVER_PUBLIC_IP"]
+
+api: yes
+apiAddress: 127.0.0.1:9997
+
+paths:
+  all:
+    source: publisher

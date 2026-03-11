@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>实时视频全屏</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="fullscreen-page">
+  <div class="fullscreen-toolbar">
+    <select id="fsVideoStreamSelect"></select>
+    <select id="fsVideoModeSelect">
+      <option value="webrtc" selected>WebRTC</option>
+      <option value="hls">HLS</option>
+    </select>
+    <button id="fsRefreshBtn" type="button" class="secondary">刷新</button>
+    <button id="fsPlayBtn" type="button">播放</button>
+    <a class="button-link" href="/video.html">返回网页模式</a>
+  </div>
+
+  <div class="fullscreen-video-wrap">
+    <video id="fsVideoPlayer" controls autoplay muted playsinline></video>
+    <div id="fsVideoStatus" class="fullscreen-status">初始化中...</div>
+  </div>
+
+  <script src="/scripts/video-fullscreen.js"></script>
+</body>
+</html>

@@ -7,6 +7,7 @@
 - 设备管理页面展示设备状态与运行时长
 - DeepSeek 分析最近 10 次水质数据并输出 AI 结论
 - 图片上传页面支持“图片 + 说明”提交，并展示最近 10 次记录
+- 实时视频监控（网页模式 + 全屏模式）
 
 ## 1. 环境要求
 
@@ -43,6 +44,12 @@ cp .env.example .env
 - `MAX_CONTENT_LENGTH`：单次上传大小限制（字节，默认 10MB）
 - `MAX_STORED_IMAGES`：最多保留图片数（默认 100）
 - `RECENT_IMAGE_LIMIT`：最近展示数量（默认 10）
+- `VIDEO_ENABLED`：是否启用视频模块（默认 `true`）
+- `VIDEO_STREAM_PREFIX`：流名前缀（默认 `live`）
+- `VIDEO_HEARTBEAT_OFFLINE_MS`：离线判定阈值（毫秒，默认 15000）
+- `VIDEO_PUBLIC_RTSP_BASE_URL`：RTSP 展示地址前缀
+- `VIDEO_PUBLIC_WEBRTC_BASE_URL`：WebRTC 播放地址前缀（默认 `/mtx-webrtc`）
+- `VIDEO_PUBLIC_HLS_BASE_URL`：HLS 播放地址前缀（默认 `/mtx-hls`）
 
 5. 启动服务：
 
@@ -57,6 +64,8 @@ npm run dev
 - DeepSeek 分析页：`http://服务器IP:3000/deepseek.html`
 - 指令执行页：`http://服务器IP:3000/commands.html`
 - 图片上传页：`http://服务器IP:3000/uploads.html`
+- 实时视频页：`http://服务器IP:3000/video.html`
+- 视频全屏页：`http://服务器IP:3000/video-fullscreen.html`
 
 ## 3. 功能说明
 
@@ -156,6 +165,29 @@ K230 额外请求头：
 - 文件保存在 `UPLOAD_DIR`
 - 总量超过 100 张时自动删除最旧图片（可通过 `MAX_STORED_IMAGES` 调整）
 
+### 3.6 实时视频监控
+
+视频链路采用：`设备推流 -> MediaMTX -> Web 页面`。
+
+- 设备推流入口（RTSP）：`rtsp://服务器IP:8554/live/{device_id}`
+- WebRTC 播放地址：`/mtx-webrtc/live/{device_id}/whep`
+- HLS 播放地址：`/mtx-hls/live/{device_id}/index.m3u8`
+
+说明：
+
+- 页面默认优先 WebRTC，失败会自动回退 HLS。
+- 公网部署时请在 `deploy/mediamtx/mediamtx.yml` 中设置 `webrtcAdditionalHosts` 为服务器公网 IP/域名。
+
+页面入口：
+
+- 网页模式：`/video.html`
+- 全屏模式：`/video-fullscreen.html`
+
+后端 API：
+
+- `GET /api/video/streams`：查询流列表与播放地址
+- `POST /api/video/heartbeat`：设备/模拟器上报流状态（支持 `X-Upload-Token`）
+
 ## 4. 主要目录
 
 ```text
@@ -173,12 +205,19 @@ public/
   devices.html
   deepseek.html
   uploads.html
+  video.html
+  video-fullscreen.html
   styles.css
   scripts/
     index.js
     devices.js
     deepseek.js
     uploads.js
+    video.js
+    video-fullscreen.js
+tools/
+  webcam_k230_sim.py
+  k230_rtsp_relay.sh
 ```
 
 ## 5. 测试接口示例
@@ -250,6 +289,38 @@ npm run db:clear:all
 sudo systemctl start water-quality-platform
 ```
 
+### 5.5 本机摄像头模拟 K230 推流
+
+新增独立脚本：`tools/webcam_k230_sim.py`
+
+Windows 示例：
+
+```bash
+python tools/webcam_k230_sim.py --device-id device_pc_001 --server-base-url http://127.0.0.1 --camera "Integrated Camera"
+```
+
+Linux 示例：
+
+```bash
+python tools/webcam_k230_sim.py --device-id device_pc_001 --server-base-url http://127.0.0.1 --camera /dev/video0
+```
+
+脚本行为：
+
+- 调用 FFmpeg 采集摄像头并推流到 `rtsp://服务器IP:8554/live/{device_id}`
+- 定时调用 `/api/video/heartbeat` 上报在线状态
+
+### 5.6 K230 RTSP 中继到平台（适配官方 RTSP Server 示例）
+
+如果 K230 运行的是官方 RTSP Server 示例（设备侧提供 `rtsp://<k230-ip>:8554/test`），
+可在平台服务器执行中继脚本把流转发到统一入口：
+
+```bash
+bash tools/k230_rtsp_relay.sh rtsp://192.168.1.88:8554/test device_k230_001
+```
+
+执行后平台可通过 `live/device_k230_001` 进行网页与全屏播放。
+
 ## 6. 备注
 
 - 数据库文件默认保存在 `data/water_quality.db`
@@ -263,7 +334,7 @@ sudo systemctl start water-quality-platform
 
 ```bash
 sudo apt update
-sudo apt install -y nginx rsync
+sudo apt install -y nginx rsync curl tar ffmpeg
 ```
 
 安装 Node.js（18+，示例使用 NodeSource）：
@@ -278,10 +349,12 @@ npm -v
 ### 7.2 开放端口（安全组 + 系统防火墙）
 
 - 阿里云控制台安全组放行 `80`（若暂不走 Nginx，可放行 `3000`）
+- 若设备从公网推 RTSP，请放行 `8554/tcp`
 - 若服务器启用了 UFW：
 
 ```bash
 sudo ufw allow 80/tcp
+sudo ufw allow 8554/tcp
 sudo ufw allow 22/tcp
 sudo ufw status
 ```
@@ -327,6 +400,14 @@ sudo systemctl restart water-quality-platform
 sudo journalctl -u water-quality-platform -f
 ```
 
+视频流服务：`mediamtx`
+
+```bash
+sudo systemctl status mediamtx
+sudo systemctl restart mediamtx
+sudo journalctl -u mediamtx -f
+```
+
 默认服务文件位置：
 
 - `/etc/systemd/system/water-quality-platform.service`
@@ -343,6 +424,12 @@ sudo systemctl restart water-quality-platform
 已自动安装配置：
 
 - `/etc/nginx/conf.d/mqtt-water-quality-platform.conf`
+
+默认转发规则：
+
+- `/` -> `127.0.0.1:3000`（Node 平台）
+- `/mtx-hls/` -> `127.0.0.1:8888`（MediaMTX HLS）
+- `/mtx-webrtc/` -> `127.0.0.1:8889`（MediaMTX WebRTC）
 
 验证与重载：
 
@@ -381,6 +468,11 @@ bash deploy/scripts/deploy.sh
 ```
 
 该脚本会自动：同步代码、安装依赖、重启服务、重载 Nginx。
+
+同时会自动安装并重启 MediaMTX 服务：
+
+- 服务名：`mediamtx`
+- 配置文件：`/opt/mqtt-water-quality-platform/deploy/mediamtx/mediamtx.yml`
 
 ### 7.7 常见错误：502 Bad Gateway
 

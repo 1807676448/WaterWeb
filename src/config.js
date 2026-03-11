@@ -27,5 +27,13 @@ module.exports = {
     apiKey: process.env.DEEPSEEK_API_KEY || '',
     baseUrl: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
     model: process.env.DEEPSEEK_MODEL || 'deepseek-chat'
+  },
+  video: {
+    enabled: String(process.env.VIDEO_ENABLED || 'true').toLowerCase() !== 'false',
+    streamPrefix: process.env.VIDEO_STREAM_PREFIX || 'live',
+    heartbeatOfflineMs: Math.max(Number(process.env.VIDEO_HEARTBEAT_OFFLINE_MS || 15000), 3000),
+    publicRtspBaseUrl: process.env.VIDEO_PUBLIC_RTSP_BASE_URL || 'rtsp://127.0.0.1:8554',
+    publicWebrtcBaseUrl: process.env.VIDEO_PUBLIC_WEBRTC_BASE_URL || '/mtx-webrtc',
+    publicHlsBaseUrl: process.env.VIDEO_PUBLIC_HLS_BASE_URL || '/mtx-hls'
   }
 };

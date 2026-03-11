@@ -1,0 +1,15 @@
+[Unit]
+Description=MediaMTX Streaming Server
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+ExecStart=/usr/local/bin/mediamtx /opt/mqtt-water-quality-platform/deploy/mediamtx/mediamtx.yml
+Restart=always
+RestartSec=3
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

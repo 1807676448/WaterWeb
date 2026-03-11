@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>实时视频</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <h2>实时视频监控</h2>
+    <nav>
+      <a href="/index.html">数据展示</a>
+      <a href="/devices.html">设备管理</a>
+      <a href="/deepseek.html">DeepSeek 分析</a>
+      <a href="/commands.html">指令执行</a>
+      <a href="/uploads.html">图片上传</a>
+      <a class="active" href="/video.html">实时视频</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <div class="row">
+        <label>视频流
+          <select id="videoStreamSelect">
+            <option value="">加载中...</option>
+          </select>
+        </label>
+        <label>协议优先级
+          <select id="videoModeSelect">
+            <option value="webrtc" selected>WebRTC（低延迟）</option>
+            <option value="hls">HLS（兼容优先）</option>
+          </select>
+        </label>
+        <button id="videoRefreshBtn" type="button" class="secondary">刷新流列表</button>
+        <button id="videoPlayBtn" type="button">开始播放</button>
+        <a id="videoFullscreenLink" class="button-link" href="/video-fullscreen.html">进入全屏页面</a>
+      </div>
+      <div id="videoStatus" class="video-status">等待选择视频流</div>
+      <div id="videoMeta" class="video-meta">-</div>
+    </div>
+
+    <div class="card">
+      <div class="video-player-wrap">
+        <video id="videoPlayer" controls autoplay muted playsinline></video>
+      </div>
+    </div>
+  </div>
+
+  <script src="/scripts/video.js"></script>
+</body>
+</html>
