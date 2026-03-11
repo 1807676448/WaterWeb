@@ -293,22 +293,39 @@ sudo systemctl start water-quality-platform
 
 新增独立脚本：`tools/webcam_k230_sim.py`
 
-Windows 示例：
+Windows（推荐）示例：
 
 ```bash
-python tools/webcam_k230_sim.py --device-id device_pc_001 --server-base-url http://127.0.0.1 --camera "Integrated Camera"
+python tools/webcam_k230_sim.py --device-id device_pc_001 --server-base-url http://106.15.53.24 --size 640x480 --fps 10 --bitrate 800k
 ```
 
 Linux 示例：
 
 ```bash
-python tools/webcam_k230_sim.py --device-id device_pc_001 --server-base-url http://127.0.0.1 --camera /dev/video0
+python tools/webcam_k230_sim.py --device-id device_pc_001 --server-base-url http://106.15.53.24 --camera /dev/video0
+```
+
+若服务端配置了 `UPLOAD_TOKEN`，请额外带上：
+
+```bash
+python tools/webcam_k230_sim.py --device-id device_pc_001 --server-base-url http://106.15.53.24 --token CHANGE_TO_STRONG_TOKEN
+```
+
+Windows 额外说明：
+
+- 需本机可执行 `ffmpeg`；若使用 `winget install Gyan.FFmpeg` 安装但 PATH 未生效，脚本会自动尝试从 Winget 默认目录定位 `ffmpeg.exe`。
+- 不传 `--camera` 时，脚本会自动探测并选择可用摄像头。
+- 如需手动查看摄像头名称，可执行：
+
+```bash
+ffmpeg -hide_banner -list_devices true -f dshow -i dummy
 ```
 
 脚本行为：
 
 - 调用 FFmpeg 采集摄像头并推流到 `rtsp://服务器IP:8554/live/{device_id}`
 - 定时调用 `/api/video/heartbeat` 上报在线状态
+- Windows/Linux 下会先预探测输入参数；若摄像头驱动不支持当前参数，会自动回退到兼容模式。
 
 ### 5.6 K230 RTSP 中继到平台（适配官方 RTSP Server 示例）
 
@@ -489,6 +506,75 @@ sudo ss -ltnp | grep 3000 || true
 ```bash
 cd /home/admin/WaterWeb
 bash deploy/scripts/deploy.sh
+```
+
+### 7.8 常见错误：视频页提示 `Failed to load because no supported source was found.`
+
+该报错通常不是前端 JS 问题，而是媒体链路异常（`/mtx-hls/` 或 `/mtx-webrtc/` 不可用）。
+
+先检查接口与代理：
+
+```bash
+curl -i http://127.0.0.1:3000/api/video/streams
+curl -i http://127.0.0.1:8888/
+curl -i http://127.0.0.1:8889/
+```
+
+判断标准：
+
+- 若 `api/video/streams` 为 `200`，但 `8888/8889` 连接失败，通常是 `mediamtx` 未正常运行。
+- 若公网访问 `http://公网IP/mtx-hls/...` 返回 `502`，通常是 Nginx 代理到了未启动的 MediaMTX 上游。
+
+继续排查：
+
+```bash
+sudo systemctl status mediamtx -l --no-pager
+sudo journalctl -u mediamtx -n 120 --no-pager
+sudo ss -ltnp | grep -E "8554|8888|8889" || true
+```
+
+### 7.9 常见错误：`mediamtx.service` 报 `status=203/EXEC`
+
+这表示 systemd 无法执行 `ExecStart` 指定的可执行文件（常见原因：文件不存在、无执行权限、损坏或架构不匹配）。
+
+快速修复（以 `v1.11.3` 为例）：
+
+```bash
+sudo systemctl stop mediamtx || true
+sudo systemctl reset-failed mediamtx || true
+
+MEDIAMTX_VERSION=1.11.3
+ARCH="$(uname -m)"
+if [ "$ARCH" = "x86_64" ]; then
+  PKG_ARCH="amd64"
+elif [ "$ARCH" = "aarch64" ]; then
+  PKG_ARCH="arm64"
+else
+  echo "不支持架构: $ARCH"
+  exit 1
+fi
+
+TMP_DIR="$(mktemp -d)"
+curl -fL "https://github.com/bluenviron/mediamtx/releases/download/v${MEDIAMTX_VERSION}/mediamtx_v${MEDIAMTX_VERSION}_linux_${PKG_ARCH}.tar.gz" -o "${TMP_DIR}/mediamtx.tgz"
+tar -xzf "${TMP_DIR}/mediamtx.tgz" -C "${TMP_DIR}"
+sudo install -m 755 "${TMP_DIR}/mediamtx" /usr/local/bin/mediamtx
+rm -rf "${TMP_DIR}"
+
+file /usr/local/bin/mediamtx
+/usr/local/bin/mediamtx --version
+sudo test -f /opt/mqtt-water-quality-platform/deploy/mediamtx/mediamtx.yml
+
+sudo systemctl daemon-reload
+sudo systemctl restart mediamtx
+sudo systemctl status mediamtx -l --no-pager
+sudo ss -ltnp | grep -E "8554|8888|8889"
+```
+
+随后重启依赖服务：
+
+```bash
+sudo systemctl restart nginx
+sudo systemctl restart water-quality-platform
 ```
 
 ## 8. MQTT 本地连接与订阅说明

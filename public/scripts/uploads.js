@@ -119,7 +119,6 @@ async function loadRecentUploads() {
 async function submitUpload() {
   const fileInput = document.getElementById('imageFile');
   const descInput = document.getElementById('imageDesc');
-  const tokenInput = document.getElementById('uploadToken');
   const button = document.getElementById('uploadBtn');
 
   const file = fileInput.files?.[0];
@@ -136,15 +135,8 @@ async function submitUpload() {
   setMessage('上传中...');
 
   try {
-    const headers = {};
-    const token = String(tokenInput.value || '').trim();
-    if (token) {
-      headers['X-Upload-Token'] = token;
-    }
-
     const response = await fetch('/api/uploads', {
       method: 'POST',
-      headers,
       body: formData
     });
 
