@@ -162,6 +162,34 @@ button.secondary:hover {
   background: #1e293b;
 }
 
+.video-entry-card {
+  background: linear-gradient(120deg, #ecfeff 0%, #f0f9ff 100%);
+  border-color: #bae6fd;
+}
+
+.video-entry-tip {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #334155;
+}
+
+.table-video-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+  background: #e2e8f0;
+}
+
+.table-video-link:hover {
+  background: #cbd5e1;
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));

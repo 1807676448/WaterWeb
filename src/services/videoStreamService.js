@@ -2,7 +2,7 @@ const dayjs = require('dayjs');
 const config = require('../config');
 const { run, all } = require('../db');
 
-const STREAM_NAME_RE = /^[a-zA-Z0-9/_-]{3,120}$/;
+const STREAM_NAME_RE = /^[a-zA-Z0-9./_-]{3,120}$/;
 const DEVICE_ID_RE = /^[a-zA-Z0-9._-]{1,64}$/;
 
 function normalizeString(value) {
@@ -26,7 +26,7 @@ function normalizeStreamName(streamName, deviceId) {
   const finalName = (custom || fallback).replace(/\/{2,}/g, '/');
 
   if (!STREAM_NAME_RE.test(finalName)) {
-    throw new Error('stream_name 格式非法，仅支持字母数字/_-');
+    throw new Error('stream_name 格式非法，仅支持字母数字./_-');
   }
 
   return finalName;

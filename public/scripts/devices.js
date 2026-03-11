@@ -21,12 +21,14 @@ async function loadDevices() {
 
     const tbody = document.getElementById('deviceTable');
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="table-empty">暂无设备状态</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="table-empty">暂无设备状态</td></tr>';
       return;
     }
 
     tbody.innerHTML = rows.map((item) => {
       const badgeClass = item.status === 'online' ? 'badge-online' : 'badge-offline';
+      const streamName = `live/${item.device_id || ''}`;
+      const videoLink = `/video.html?stream=${encodeURIComponent(streamName)}&mode=webrtc`;
       return `
         <tr>
           <td>${item.device_id}</td>
@@ -34,6 +36,7 @@ async function loadDevices() {
           <td>${item.runtime_seconds ?? 0}</td>
           <td>${formatDisplayTime(item.last_seen)}</td>
           <td>${formatDisplayTime(item.updated_at)}</td>
+          <td><a class="table-video-link" href="${videoLink}">查看视频</a></td>
         </tr>
       `;
     }).join('');

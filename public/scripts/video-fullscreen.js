@@ -1,5 +1,15 @@
 let fsCurrentPeer = null;
 let fsPollTimer = null;
+let fsCurrentHls = null;
+let fsHlsScriptPromise = null;
+
+const FS_HLS_MIME = 'application/vnd.apple.mpegurl';
+const FS_HLS_SCRIPT_CANDIDATES = [
+  '/vendor/hls.min.js',
+  'https://cdn.bootcdn.net/ajax/libs/hls.js/1.5.18/hls.min.js',
+  'https://cdn.jsdelivr.net/npm/hls.js@1.5.18/dist/hls.min.js',
+  'https://unpkg.com/hls.js@1.5.18/dist/hls.min.js'
+];
 
 function fsSetStatus(text, isError = false) {
   const el = document.getElementById('fsVideoStatus');
@@ -13,6 +23,46 @@ function fsGetQueryDefaults() {
     stream: params.get('stream') || '',
     mode: params.get('mode') || 'webrtc'
   };
+}
+
+function fsCanUseNativeHls(videoEl) {
+  return !!videoEl.canPlayType(FS_HLS_MIME);
+}
+
+function fsLoadScript(url) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = url;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error(`加载脚本失败: ${url}`));
+    document.head.appendChild(script);
+  });
+}
+
+async function fsEnsureHlsLibrary() {
+  if (window.Hls) {
+    return window.Hls;
+  }
+
+  if (!fsHlsScriptPromise) {
+    fsHlsScriptPromise = (async () => {
+      for (const url of FS_HLS_SCRIPT_CANDIDATES) {
+        try {
+          await fsLoadScript(url);
+          if (window.Hls) {
+            return window.Hls;
+          }
+        } catch (error) {
+          // Try next source when current one is unavailable.
+        }
+      }
+
+      throw new Error('当前浏览器不支持原生 HLS，且 hls.js 加载失败');
+    })();
+  }
+
+  return fsHlsScriptPromise;
 }
 
 async function fsFetchStreams() {
@@ -41,11 +91,15 @@ function fsWaitIceGatheringComplete(peer) {
     setTimeout(() => {
       peer.removeEventListener('icegatheringstatechange', checkState);
       resolve();
-    }, 1500);
+    }, 4000);
   });
 }
 
 async function fsPlayByWebRTC(playback, videoEl) {
+  if (!playback || !playback.webrtc_whep_url) {
+    throw new Error('缺少 WebRTC 播放地址');
+  }
+
   const peer = new RTCPeerConnection({
     iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }]
   });
@@ -62,16 +116,74 @@ async function fsPlayByWebRTC(playback, videoEl) {
 
   const response = await fetch(playback.webrtc_whep_url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/sdp' },
+    headers: {
+      'Content-Type': 'application/sdp',
+      Accept: 'application/sdp'
+    },
     body: peer.localDescription.sdp
   });
 
   if (!response.ok) {
-    throw new Error(`WebRTC 协商失败 HTTP ${response.status}`);
+    const detail = await response.text();
+    throw new Error(`WebRTC 协商失败 HTTP ${response.status}${detail ? `: ${detail.slice(0, 160)}` : ''}`);
   }
 
   const answerSdp = await response.text();
   await peer.setRemoteDescription({ type: 'answer', sdp: answerSdp });
+}
+
+async function fsPlayByHls(playback, videoEl) {
+  if (!playback || !playback.hls_url) {
+    throw new Error('缺少 HLS 播放地址');
+  }
+
+  if (fsCurrentHls) {
+    fsCurrentHls.destroy();
+    fsCurrentHls = null;
+  }
+
+  videoEl.srcObject = null;
+
+  if (fsCanUseNativeHls(videoEl)) {
+    videoEl.src = playback.hls_url;
+    return videoEl.play();
+  }
+
+  const Hls = await fsEnsureHlsLibrary();
+  if (!Hls || !Hls.isSupported()) {
+    throw new Error('当前浏览器不支持 HLS（可尝试 WebRTC 或更换浏览器）');
+  }
+
+  fsCurrentHls = new Hls({
+    enableWorker: true,
+    lowLatencyMode: true,
+    backBufferLength: 30
+  });
+  fsCurrentHls.loadSource(playback.hls_url);
+  fsCurrentHls.attachMedia(videoEl);
+
+  await new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error('HLS 首帧超时，请检查流状态'));
+    }, 8000);
+
+    function clearAndResolve() {
+      clearTimeout(timeout);
+      resolve();
+    }
+
+    function onError(event, data) {
+      if (data && data.fatal) {
+        clearTimeout(timeout);
+        reject(new Error(`HLS 错误: ${data.type || 'unknown'}/${data.details || 'unknown'}`));
+      }
+    }
+
+    fsCurrentHls.once(Hls.Events.MANIFEST_PARSED, clearAndResolve);
+    fsCurrentHls.on(Hls.Events.ERROR, onError);
+  });
+
+  return videoEl.play();
 }
 
 function fsStopPlayback() {
@@ -79,6 +191,10 @@ function fsStopPlayback() {
   if (fsCurrentPeer) {
     fsCurrentPeer.close();
     fsCurrentPeer = null;
+  }
+  if (fsCurrentHls) {
+    fsCurrentHls.destroy();
+    fsCurrentHls = null;
   }
   videoEl.pause();
   videoEl.removeAttribute('src');
@@ -112,17 +228,13 @@ async function fsStartPlayback() {
         return;
       } catch (webrtcError) {
         fsSetStatus(`WebRTC 失败，尝试 HLS 回退：${webrtcError.message}`, true);
-        videoEl.srcObject = null;
-        videoEl.src = target.playback.hls_url;
-        await videoEl.play();
+        await fsPlayByHls(target.playback, videoEl);
         fsSetStatus(`播放中（HLS 回退）：${target.stream_name}`);
         return;
       }
     }
 
-    videoEl.srcObject = null;
-    videoEl.src = target.playback.hls_url;
-    await videoEl.play();
+    await fsPlayByHls(target.playback, videoEl);
     fsSetStatus(`播放中（HLS）：${target.stream_name}`);
   } catch (error) {
     fsSetStatus(`播放失败：${error.message}`, true);
