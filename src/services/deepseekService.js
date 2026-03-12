@@ -62,11 +62,17 @@ async function requestDeepseekWithRetry(prompt) {
         payload,
         {
           headers: {
-            Authorization: `Bearer ${config.deepseek.apiKey}`,
+            Authorization: `Bearer ${config.deepseek.apiKey}`.trim(),
             'Content-Type': 'application/json',
-            'Accept-Encoding': 'identity'
+            // 必须强制禁用压缩，Node 18 处理长响应压缩极不稳定
+            'Accept-Encoding': 'identity',
+            'Connection': 'keep-alive'
           },
-          timeout: REQUEST_TIMEOUT_MS
+          timeout: REQUEST_TIMEOUT_MS,
+          // 增加以下配置防止 stream aborted
+          decompress: false,
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity
         }
       );
     } catch (error) {
