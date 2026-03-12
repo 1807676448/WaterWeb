@@ -59,7 +59,7 @@ function buildSafeUpstreamErrorLog(error) {
   const headers = error?.response?.headers || {};
   return {
     code: String(error?.code || 'UNKNOWN'),
-    status: error?.response?.status ?? null,
+    status: error?.status ?? error?.response?.status ?? null,
     message: String(error?.message || 'unknown error'),
     traceId: headers['x-ds-trace-id'] || headers['x-request-id'] || ''
   };
@@ -67,8 +67,18 @@ function buildSafeUpstreamErrorLog(error) {
 
 function isTransientUpstreamError(error) {
   const code = String(error?.code || '').toUpperCase();
+  const status = Number(error?.status || error?.response?.status || 0);
   const message = String(error?.message || '').toLowerCase();
-  return TRANSIENT_UPSTREAM_ERROR_CODES.has(code) || message.includes('aborted');
+  return (
+    TRANSIENT_UPSTREAM_ERROR_CODES.has(code)
+    || status === 429
+    || status >= 500
+    || message.includes('aborted')
+    || message.includes('timed out')
+    || message.includes('timeout')
+    || message.includes('network')
+    || message.includes('socket')
+  );
 }
 
 router.get('/metrics', async (req, res) => {
