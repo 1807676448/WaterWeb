@@ -3,6 +3,91 @@ const config = require('../config');
 const { latestWaterQuality } = require('./deviceService');
 const { run, get } = require('../db');
 
+// Retry transient upstream/network issues to reduce random ECONNRESET failures.
+const RETRYABLE_ERROR_CODES = new Set([
+  'ECONNRESET',
+  'ETIMEDOUT',
+  'ECONNABORTED',
+  'EPIPE',
+  'ENETRESET',
+  'EAI_AGAIN'
+]);
+const REQUEST_TIMEOUT_MS = 30000;
+const MAX_RETRIES = 2;
+const RETRY_BASE_DELAY_MS = 800;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function shouldRetryDeepseekRequest(error) {
+  const code = String(error?.code || '').toUpperCase();
+  const status = Number(error?.response?.status || 0);
+  const message = String(error?.message || '').toLowerCase();
+
+  if (status === 429 || status >= 500) {
+    return true;
+  }
+  if (RETRYABLE_ERROR_CODES.has(code)) {
+    return true;
+  }
+  return message.includes('aborted') || message.includes('socket hang up');
+}
+
+async function requestDeepseekWithRetry(prompt) {
+  const totalAttempts = MAX_RETRIES + 1;
+
+  for (let attempt = 1; attempt <= totalAttempts; attempt += 1) {
+    try {
+      return await axios.post(
+        `${config.deepseek.baseUrl}/chat/completions`,
+        {
+          model: config.deepseek.model,
+          messages: [
+            {
+              role: 'system',
+              content: '你是水质分析专家，请使用中文输出，结构清晰，结论可执行。'
+            },
+            {
+              role: 'user',
+              content: JSON.stringify(prompt)
+            }
+          ],
+          temperature: 0.2
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${config.deepseek.apiKey}`,
+            'Content-Type': 'application/json',
+            // Disable compressed response to avoid unzip-stream abort errors on unstable links.
+            'Accept-Encoding': 'identity'
+          },
+          timeout: REQUEST_TIMEOUT_MS
+        }
+      );
+    } catch (error) {
+      const code = String(error?.code || 'UNKNOWN');
+      const status = error?.response?.status ?? 'N/A';
+      const message = String(error?.message || 'unknown');
+      const retryable = shouldRetryDeepseekRequest(error);
+      const hasNextAttempt = attempt < totalAttempts;
+
+      console.warn(
+        `[deepseek] request failed attempt=${attempt}/${totalAttempts} code=${code} status=${status} message=${message}`
+      );
+
+      if (!retryable || !hasNextAttempt) {
+        throw error;
+      }
+
+      const delayMs = RETRY_BASE_DELAY_MS * (2 ** (attempt - 1));
+      await sleep(delayMs);
+    }
+  }
+
+  throw new Error('DeepSeek request failed without a concrete error');
+}
+
 async function saveAnalysisReport({ deviceId, model, sampleCount, message, rawData }) {
   const result = await run(
     `INSERT INTO analysis_reports (
@@ -85,30 +170,7 @@ async function analyzeLatestWaterQuality(deviceId) {
     data: latestData
   };
 
-  const response = await axios.post(
-    `${config.deepseek.baseUrl}/chat/completions`,
-    {
-      model: config.deepseek.model,
-      messages: [
-        {
-          role: 'system',
-          content: '你是水质分析专家，请使用中文输出，结构清晰，结论可执行。'
-        },
-        {
-          role: 'user',
-          content: JSON.stringify(prompt)
-        }
-      ],
-      temperature: 0.2
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${config.deepseek.apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      timeout: 30000
-    }
-  );
+  const response = await requestDeepseekWithRetry(prompt);
 
   const message = response.data?.choices?.[0]?.message?.content || 'DeepSeek 未返回有效分析结果。';
   const result = {

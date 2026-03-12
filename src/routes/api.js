@@ -26,6 +26,15 @@ const upload = multer({
   }
 });
 
+const TRANSIENT_UPSTREAM_ERROR_CODES = new Set([
+  'ECONNRESET',
+  'ETIMEDOUT',
+  'ECONNABORTED',
+  'EPIPE',
+  'ENETRESET',
+  'EAI_AGAIN'
+]);
+
 function verifyUploadToken(req) {
   if (!config.upload.token) {
     return true;
@@ -44,6 +53,22 @@ function parseUploadDescription(req) {
   }
 
   return String(req.get('X-Description') || '').trim();
+}
+
+function buildSafeUpstreamErrorLog(error) {
+  const headers = error?.response?.headers || {};
+  return {
+    code: String(error?.code || 'UNKNOWN'),
+    status: error?.response?.status ?? null,
+    message: String(error?.message || 'unknown error'),
+    traceId: headers['x-ds-trace-id'] || headers['x-request-id'] || ''
+  };
+}
+
+function isTransientUpstreamError(error) {
+  const code = String(error?.code || '').toUpperCase();
+  const message = String(error?.message || '').toLowerCase();
+  return TRANSIENT_UPSTREAM_ERROR_CODES.has(code) || message.includes('aborted');
 }
 
 router.get('/metrics', async (req, res) => {
@@ -111,6 +136,14 @@ router.post('/analysis/deepseek', async (req, res) => {
     const result = await analyzeLatestWaterQuality(deviceId);
     res.json(result);
   } catch (error) {
+    const safeError = buildSafeUpstreamErrorLog(error);
+    console.error('[deepseek] upstream request failed', safeError);
+
+    if (isTransientUpstreamError(error)) {
+      res.status(502).json({ error: 'DeepSeek 分析失败: 上游连接中断，请稍后重试。' });
+      return;
+    }
+
     res.status(500).json({ error: `DeepSeek 分析失败: ${error.message}` });
   }
 });

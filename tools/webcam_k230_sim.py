@@ -41,7 +41,7 @@ def parse_args():
   parser.add_argument('--rtsp-url', default='', help='可选，手动指定 RTSP 推流地址')
   parser.add_argument('--camera', default='', help='摄像头源，Windows 填设备名；Linux 填设备路径（如 /dev/video0）')
   parser.add_argument('--size', default='1280x720', help='分辨率，默认 1280x720')
-  parser.add_argument('--fps', type=int, default=90, help='帧率，默认 90')
+  parser.add_argument('--fps', type=int, default=25, help='帧率，默认 90')
   parser.add_argument('--bitrate', default='1500k', help='视频码率，默认 1500k')
   parser.add_argument('--codec', default='h264', help='编码标识上报值，默认 h264')
   parser.add_argument('--source', default='pc-webcam-sim', help='来源标识上报值')
