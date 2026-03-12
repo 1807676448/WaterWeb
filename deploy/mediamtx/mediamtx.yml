@@ -12,7 +12,7 @@ hlsAlwaysRemux: yes
 webrtc: yes
 webrtcAddress: :8889
 # When server is behind Nginx or NAT, set this to your public host/IP.
-# webrtcAdditionalHosts: ["YOUR_SERVER_PUBLIC_IP"]
+webrtcAdditionalHosts: ["106.15.53.24"]
 
 api: yes
 apiAddress: 127.0.0.1:9997

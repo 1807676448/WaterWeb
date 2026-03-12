@@ -43,13 +43,20 @@ async function loadLatestAnalysis() {
 
   try {
     const response = await fetch(`/api/analysis/deepseek/latest?${query.toString()}`);
-    const result = await response.json();
     if (!response.ok) {
+      const errorText = await response.text();
+      let errorMsg = '加载历史失败';
+      try {
+        const errorJson = JSON.parse(errorText);
+        errorMsg = errorJson.error || errorMsg;
+      } catch (e) {
+        errorMsg = `HTTP ${response.status}`;
+      }
       renderMeta(null);
-      resultEl.textContent = result.error || '加载历史失败';
+      resultEl.textContent = errorMsg;
       return;
     }
-
+    const result = await response.json();
     const report = result.data;
     renderMeta(report);
     if (!report) {
@@ -79,12 +86,20 @@ async function analyze() {
       body: JSON.stringify({ device_id: deviceId || undefined })
     });
 
-    const result = await response.json();
     if (!response.ok) {
-      resultEl.textContent = result.error || '分析失败';
+      const errorText = await response.text();
+      let errorMsg = '分析失败';
+      try {
+        const errorJson = JSON.parse(errorText);
+        errorMsg = errorJson.error || errorMsg;
+      } catch (e) {
+        errorMsg = `HTTP ${response.status}`;
+      }
+      resultEl.textContent = errorMsg;
       return;
     }
 
+    const result = await response.json();
     renderMeta({
       created_at: new Date().toISOString(),
       model: result.model,
