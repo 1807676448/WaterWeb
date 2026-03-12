@@ -12,7 +12,7 @@ const RETRYABLE_ERROR_CODES = new Set([
   'ENETRESET',
   'EAI_AGAIN'
 ]);
-const REQUEST_TIMEOUT_MS = 30000;
+const REQUEST_TIMEOUT_MS = 120000;
 const MAX_RETRIES = 2;
 const RETRY_BASE_DELAY_MS = 800;
 
@@ -25,7 +25,7 @@ function shouldRetryDeepseekRequest(error) {
   const status = Number(error?.response?.status || 0);
   const message = String(error?.message || '').toLowerCase();
 
-  if (status === 429 || status >= 500) {
+  if (status === 429 || (status >= 500 && status !== 504)) {
     return true;
   }
   if (RETRYABLE_ERROR_CODES.has(code)) {
@@ -39,27 +39,31 @@ async function requestDeepseekWithRetry(prompt) {
 
   for (let attempt = 1; attempt <= totalAttempts; attempt += 1) {
     try {
+      const payload = {
+        model: config.deepseek.model || 'deepseek-chat',
+        messages: [
+          {
+            role: 'system',
+            content: '你是一个专业的水质分析专家。请根据提供的传感器数据（TDS, COD, TOC, pH, 温度, 浊度等），生成一份简明扼要的分析报告。要求：1. 使用中文；2. 结构清晰（可以使用 Markdown 标题和列表）；3. 给出评价和建议。'
+          },
+          {
+            role: 'user',
+            content: `以下是最近的水质检测数据，请分析其健康状况并给出建议：\n${JSON.stringify(prompt, null, 2)}`
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 2048
+      };
+
+      console.log(`[deepseek] sending request to ${config.deepseek.baseUrl}/chat/completions (attempt ${attempt})`);
+
       return await axios.post(
         `${config.deepseek.baseUrl}/chat/completions`,
-        {
-          model: config.deepseek.model,
-          messages: [
-            {
-              role: 'system',
-              content: '你是水质分析专家，请使用中文输出，结构清晰，结论可执行。'
-            },
-            {
-              role: 'user',
-              content: JSON.stringify(prompt)
-            }
-          ],
-          temperature: 0.2
-        },
+        payload,
         {
           headers: {
             Authorization: `Bearer ${config.deepseek.apiKey}`,
             'Content-Type': 'application/json',
-            // Disable compressed response to avoid unzip-stream abort errors on unstable links.
             'Accept-Encoding': 'identity'
           },
           timeout: REQUEST_TIMEOUT_MS
