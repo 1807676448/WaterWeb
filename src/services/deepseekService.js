@@ -64,15 +64,17 @@ async function requestDeepseekWithRetry(prompt) {
           headers: {
             Authorization: `Bearer ${config.deepseek.apiKey}`.trim(),
             'Content-Type': 'application/json',
-            // 必须强制禁用压缩，Node 18 处理长响应压缩极不稳定
             'Accept-Encoding': 'identity',
-            'Connection': 'keep-alive'
+            'Connection': 'keep-alive',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
           },
           timeout: REQUEST_TIMEOUT_MS,
-          // 增加以下配置防止 stream aborted
           decompress: false,
           maxContentLength: Infinity,
-          maxBodyLength: Infinity
+          maxBodyLength: Infinity,
+          // 强制使用 http 代理或禁用默认代理，防止内部库劫持
+          proxy: false
         }
       );
     } catch (error) {
