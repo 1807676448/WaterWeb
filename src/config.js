@@ -34,6 +34,9 @@ module.exports = {
     heartbeatOfflineMs: Math.max(Number(process.env.VIDEO_HEARTBEAT_OFFLINE_MS || 15000), 3000),
     publicRtspBaseUrl: process.env.VIDEO_PUBLIC_RTSP_BASE_URL || 'rtsp://127.0.0.1:8554',
     publicWebrtcBaseUrl: process.env.VIDEO_PUBLIC_WEBRTC_BASE_URL || '/mtx-webrtc',
-    publicHlsBaseUrl: process.env.VIDEO_PUBLIC_HLS_BASE_URL || '/mtx-hls'
+    publicHlsBaseUrl: process.env.VIDEO_PUBLIC_HLS_BASE_URL || '/mtx-hls',
+    // MediaMTX backend (被代理的目标)
+    mtxWebrtcBackend: process.env.MTX_WEBRTC_BACKEND || 'http://127.0.0.1:8889',
+    mtxHlsBackend: process.env.MTX_HLS_BACKEND || 'http://127.0.0.1:8888'
   }
 };

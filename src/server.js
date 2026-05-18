@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const { createProxyMiddleware } = require('http-proxy-middleware');
 const config = require('./config');
 const { initDb } = require('./db');
 const apiRouter = require('./routes/api');
@@ -16,6 +17,43 @@ async function bootstrap() {
   app.use(express.json());
   app.use(['/api', '/'], apiRouter);
   app.use(config.upload.publicBasePath, express.static(config.upload.uploadDir));
+
+  // MediaMTX 代理 - WebRTC (WHEP)
+  if (config.video.enabled && config.video.mtxWebrtcBackend) {
+    app.use(
+      '/mtx-webrtc',
+      createProxyMiddleware({
+        target: config.video.mtxWebrtcBackend,
+        changeOrigin: true,
+        pathRewrite: { '^/mtx-webrtc': '' },
+        on: {
+          error: (err, req, res) => {
+            console.error('[mtx-webrtc proxy] error:', err.message);
+          }
+        }
+      })
+    );
+    console.log(`[video] WebRTC proxy: /mtx-webrtc -> ${config.video.mtxWebrtcBackend}`);
+  }
+
+  // MediaMTX 代理 - HLS
+  if (config.video.enabled && config.video.mtxHlsBackend) {
+    app.use(
+      '/mtx-hls',
+      createProxyMiddleware({
+        target: config.video.mtxHlsBackend,
+        changeOrigin: true,
+        pathRewrite: { '^/mtx-hls': '' },
+        on: {
+          error: (err, req, res) => {
+            console.error('[mtx-hls proxy] error:', err.message);
+          }
+        }
+      })
+    );
+    console.log(`[video] HLS proxy: /mtx-hls -> ${config.video.mtxHlsBackend}`);
+  }
+
   app.use(express.static(path.resolve(__dirname, '../public')));
 
   app.get('/health', (req, res) => {

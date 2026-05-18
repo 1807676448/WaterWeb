@@ -1,0 +1,31 @@
+version: '3.8'
+
+# MediaMTX + Node.js 平台一键部署
+# 在服务器上运行: docker compose up -d
+
+services:
+  # RTSP 媒体服务器
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    container_name: mediamtx
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
+
+  # Node.js Web 平台 (可选, 如果不用 pm2 管理)
+  # web:
+  #   build: .
+  #   container_name: water-platform
+  #   restart: unless-stopped
+  #   ports:
+  #     - "3000:3000"
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     - ./data:/app/data

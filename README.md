@@ -33,14 +33,22 @@ cp .env.example .env
 
 根据实际情况修改 `.env`：
 
+- `PORT`：服务端口（默认 `3000`）
 - `MQTT_URL`：MQTT 地址
+- `MQTT_USERNAME`：MQTT 用户名（可选）
+- `MQTT_PASSWORD`：MQTT 密码（可选）
+- `MQTT_CLIENT_ID`：MQTT 客户端标识（默认 `water-platform-server`）
 - `MQTT_UPLINK_TOPIC`：设备上报主题（默认 `devices/+/up`）
 - `MQTT_STATUS_TOPIC`：设备状态主题（默认 `devices/+/status`）
 - `MQTT_COMMAND_TOPIC`：设备命令主题（默认 `devices/+/command`）
 - `MQTT_DOWNLINK_TOPIC_TEMPLATE`：下发主题模板（默认 `devices/{device_id}/down`）
+- `DB_PATH`：SQLite 数据库路径（默认 `./data/water_quality.db`）
 - `DEEPSEEK_API_KEY`：DeepSeek Key（可选）
+- `DEEPSEEK_BASE_URL`：DeepSeek API 地址（默认 `https://api.deepseek.com`）
+- `DEEPSEEK_MODEL`：DeepSeek 模型名（默认 `deepseek-chat`）
 - `UPLOAD_TOKEN`：上传鉴权令牌（可选，建议设置）
 - `UPLOAD_DIR`：图片落盘目录（默认 `./data/uploads`）
+- `PUBLIC_BASE_PATH`：图片公开访问路径前缀（默认 `/uploads`）
 - `MAX_CONTENT_LENGTH`：单次上传大小限制（字节，默认 10MB）
 - `MAX_STORED_IMAGES`：最多保留图片数（默认 100）
 - `RECENT_IMAGE_LIMIT`：最近展示数量（默认 10）
@@ -191,33 +199,60 @@ K230 额外请求头：
 ## 4. 主要目录
 
 ```text
-src/
-  server.js
-  config.js
-  db.js
-  routes/api.js
-  services/
-    mqttService.js
-    deviceService.js
-    deepseekService.js
-public/
-  index.html
-  devices.html
-  deepseek.html
-  uploads.html
-  video.html
-  video-fullscreen.html
-  styles.css
-  scripts/
-    index.js
-    devices.js
-    deepseek.js
-    uploads.js
-    video.js
-    video-fullscreen.js
-tools/
-  webcam_k230_sim.py
-  k230_rtsp_relay.sh
+├── src/
+│   ├── server.js                  # 服务入口，Express 启动与路由挂载
+│   ├── config.js                  # 环境变量读取与配置聚合
+│   ├── db.js                      # SQLite 数据库初始化与查询封装
+│   ├── routes/
+│   │   └── api.js                 # 全部 REST API 路由
+│   └── services/
+│       ├── mqttService.js         # MQTT 连接、订阅与指令下发
+│       ├── deviceService.js       # 设备状态管理与数据查询
+│       ├── deepseekService.js     # DeepSeek AI 分析调用
+│       ├── imageUploadService.js  # 图片落盘、校验与清理
+│       └── videoStreamService.js  # 视频流状态与心跳管理
+├── public/
+│   ├── index.html                 # 数据展示页（图表 + 表格）
+│   ├── devices.html               # 设备管理页
+│   ├── deepseek.html              # DeepSeek AI 分析页
+│   ├── commands.html              # 指令执行页
+│   ├── uploads.html               # 图片上传与最近记录页
+│   ├── video.html                 # 实时视频页（网页模式）
+│   ├── video-fullscreen.html      # 实时视频页（全屏模式）
+│   ├── styles.css                 # 全局样式
+│   ├── vendor/                    # 第三方前端库
+│   │   ├── marked.min.js
+│   │   └── purify.min.js
+│   └── scripts/
+│       ├── index.js               # 数据展示页逻辑
+│       ├── devices.js             # 设备管理页逻辑
+│       ├── deepseek.js            # DeepSeek 分析页逻辑
+│       ├── commands.js            # 指令页逻辑
+│       ├── uploads.js             # 图片上传页逻辑
+│       ├── video.js               # 网页视频页逻辑
+│       └── video-fullscreen.js    # 全屏视频页逻辑
+├── deploy/
+│   ├── mediamtx/
+│   │   └── mediamtx.yml           # MediaMTX 流媒体服务配置
+│   ├── nginx/
+│   │   └── water-quality-platform.conf  # Nginx 反向代理配置
+│   ├── scripts/
+│   │   └── deploy.sh              # 一键部署脚本
+│   └── systemd/
+│       ├── water-quality-platform.service  # 业务服务 systemd 配置
+│       └── mediamtx.service                # 流媒体服务 systemd 配置
+├── scripts/
+│   └── clear-db.js               # 数据库清空工具
+├── tools/                        # 辅助工具脚本
+│   ├── webcam_k230_sim.py        # PC 摄像头模拟 K230 推流
+│   ├── k230_hotspot_relay.py     # Win11/手机热点中继 K230 流到平台
+│   ├── canmv_k230_rtsp_server.py # K230 开发板 RTSP 推流服务
+│   ├── k230_rtsp_relay.sh        # K230 RTSP 中继到平台（Shell 版）
+│   └── k230_rtsp_debug_viewer.py # K230 RTSP 局域网调试查看器
+├── wifi_image_uploader.py        # 本地 WiFi 模拟设备图片上传
+├── .env.example                  # 环境变量模板
+├── package.json
+└── README.md
 ```
 
 ## 5. 测试接口示例
@@ -238,7 +273,7 @@ curl "http://127.0.0.1:3000/api/metrics?device_id=device_002&limit=50"
 
 ### 5.3 Python 模拟本地 WiFi 设备上传图片
 
-项目根目录新增脚本：`wifi_image_uploader.py`
+项目根目录脚本：`wifi_image_uploader.py`
 
 功能：
 
@@ -337,6 +372,46 @@ bash tools/k230_rtsp_relay.sh rtsp://192.168.1.88:8554/test device_k230_001
 ```
 
 执行后平台可通过 `live/device_k230_001` 进行网页与全屏播放。
+
+### 5.7 K230 基于 Win11/手机热点的推流与中继方案（局域网穿透）
+
+当 K230 连接在电脑或手机热点（没有直接公网 IP），但电脑本身可以访问公网平台时，可以使用此整合方案。
+
+**步骤 1：K230 端启动 RTSP 服务**
+
+1. 将 K230 连接至电脑。
+2. 在 CanMV IDE 中打开并运行 `tools/canmv_k230_rtsp_server.py`（请先在代码中修改您的 WIFI_SSID 和密码）。
+3. 运行后，IDE 终端会输出类似 `rtsp://192.168.137.52:8554/test` 的内网流地址。
+
+**步骤 2：电脑端拉流并转发到平台（带心跳）**
+
+在同局域网（连接同一热点的电脑）中运行自带心跳上报的 Python 中继脚本：
+
+```bash
+python tools/k230_hotspot_relay.py --k230-rtsp rtsp://192.168.137.52:8554/test --device-id device_k230_001 --server-base-url http://106.15.53.24
+```
+
+脚本说明：
+- 该脚本通过 FFmpeg 捕获局域网内 K230 流资源，直接拷贝（Copy模式，不耗CPU）推向目标云端。
+- 自动向云端发送 `/api/video/heartbeat`，激活 Web 页面上设备的状态为“在线”。
+
+### 5.8 K230 RTSP 局域网调试查看器
+
+在局域网内直接拉取 K230 RTSP 流并在 PC 端实时预览，用于排障和流质量评估：
+
+```bash
+pip install opencv-python pillow
+python tools/k230_rtsp_debug_viewer.py --url rtsp://192.168.137.52:8554/test
+```
+
+依赖：
+- `opencv-python`：视频解码与帧采集
+- `pillow`：Tkinter GUI 图像渲染
+
+功能：
+- 实时帧率统计与显示
+- 丢帧/卡顿监控
+- 支持鼠标拖动窗口调整大小
 
 ## 6. 备注
 
