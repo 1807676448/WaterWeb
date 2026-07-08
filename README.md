@@ -45,7 +45,7 @@ cp .env.example .env
 - `DB_PATH`：SQLite 数据库路径（默认 `./data/water_quality.db`）
 - `DEEPSEEK_API_KEY`：DeepSeek Key（可选）
 - `DEEPSEEK_BASE_URL`：DeepSeek API 地址（默认 `https://api.deepseek.com`）
-- `DEEPSEEK_MODEL`：DeepSeek 模型名（默认 `deepseek-chat`）
+- `DEEPSEEK_MODEL`：DeepSeek 模型名（默认 `deepseek-v4-flash`，非思考模式）
 - `UPLOAD_TOKEN`：上传鉴权令牌（可选，建议设置）
 - `UPLOAD_DIR`：图片落盘目录（默认 `./data/uploads`）
 - `PUBLIC_BASE_PATH`：图片公开访问路径前缀（默认 `/uploads`）

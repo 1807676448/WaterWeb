@@ -48,7 +48,7 @@ function shouldRetryDeepseekRequest(error) {
 
 function buildRequestBody(prompt) {
   return {
-    model: config.deepseek.model || 'deepseek-chat',
+    model: config.deepseek.model || 'deepseek-v4-flash',
     messages: [
       {
         role: 'system',
@@ -60,7 +60,8 @@ function buildRequestBody(prompt) {
       }
     ],
     temperature: 0.3,
-    max_tokens: 2048
+    max_tokens: 2048,
+    thinking: { type: 'disabled' }
   };
 }
 
