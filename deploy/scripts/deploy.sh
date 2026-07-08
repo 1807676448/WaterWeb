@@ -48,6 +48,8 @@ sudo rsync -av --delete \
   --exclude node_modules \
   --exclude .git \
   --exclude data \
+  --exclude tools \
+  --exclude docs \
   ./ ${APP_DIR}/
 
 echo "[3/10] 安装依赖"

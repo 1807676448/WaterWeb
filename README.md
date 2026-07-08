@@ -243,13 +243,16 @@ K230 额外请求头：
 │       └── mediamtx.service                # 流媒体服务 systemd 配置
 ├── scripts/
 │   └── clear-db.js               # 数据库清空工具
+├── docs/                         # 项目文档
+│   ├── k230-pwm-tutorial.md      # K230 PWM 使用教程
+│   └── k230-rtsp-pwm-performance.md  # K230 RTSP+PWM 性能优化报告
 ├── tools/                        # 辅助工具脚本
 │   ├── webcam_k230_sim.py        # PC 摄像头模拟 K230 推流
 │   ├── k230_hotspot_relay.py     # Win11/手机热点中继 K230 流到平台
 │   ├── canmv_k230_rtsp_server.py # K230 开发板 RTSP 推流服务
 │   ├── k230_rtsp_relay.sh        # K230 RTSP 中继到平台（Shell 版）
-│   └── k230_rtsp_debug_viewer.py # K230 RTSP 局域网调试查看器
-├── wifi_image_uploader.py        # 本地 WiFi 模拟设备图片上传
+│   ├── k230_rtsp_debug_viewer.py # K230 RTSP 局域网调试查看器
+│   └── wifi_image_uploader.py    # 本地 WiFi 模拟设备图片上传
 ├── .env.example                  # 环境变量模板
 ├── package.json
 └── README.md
@@ -413,16 +416,23 @@ python tools/k230_rtsp_debug_viewer.py --url rtsp://192.168.137.52:8554/test
 - 丢帧/卡顿监控
 - 支持鼠标拖动窗口调整大小
 
-## 6. 备注
+## 6. 相关文档
+
+项目文档位于 `docs/` 目录：
+
+- **[`docs/k230-pwm-tutorial.md`](docs/k230-pwm-tutorial.md)** — K230 PWM 使用教程，包含 PWM 基本原理、通道说明、API 用法示例及应用场景。
+- **[`docs/k230-rtsp-pwm-performance.md`](docs/k230-rtsp-pwm-performance.md)** — K230 RTSP + PWM 云台性能优化报告，记录了编码缓冲区、GetStream 模式、UDP 轮询频率等问题的根因分析与修复方案。
+
+## 7. 备注
 
 - 数据库文件默认保存在 `data/water_quality.db`
 - 若未配置 `DEEPSEEK_API_KEY`，分析页会返回本地兜底提示文本
 
-## 7. 阿里云服务器部署方案（推荐生产）
+## 8. 阿里云服务器部署方案（推荐生产）
 
 以下方案适用于通过 VS Code Remote SSH 登录阿里云轻应用服务器后执行。
 
-### 7.1 服务器初始化
+### 8.1 服务器初始化
 
 ```bash
 sudo apt update
@@ -438,7 +448,7 @@ node -v
 npm -v
 ```
 
-### 7.2 开放端口（安全组 + 系统防火墙）
+### 8.2 开放端口（安全组 + 系统防火墙）
 
 - 阿里云控制台安全组放行 `80`（若暂不走 Nginx，可放行 `3000`）
 - 若设备从公网推 RTSP，请放行 `8554/tcp`
@@ -451,7 +461,7 @@ sudo ufw allow 22/tcp
 sudo ufw status
 ```
 
-### 7.3 首次部署
+### 8.3 首次部署
 
 在项目根目录执行：
 
@@ -482,7 +492,7 @@ sudo nano /opt/mqtt-water-quality-platform/.env
 bash deploy/scripts/deploy.sh
 ```
 
-### 7.4 systemd 服务管理
+### 8.4 systemd 服务管理
 
 服务名：`water-quality-platform`
 
