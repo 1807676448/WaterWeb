@@ -48,14 +48,17 @@ function shouldRetryDeepseekRequest(error) {
 
 function buildRequestBody(prompt) {
   const now = new Date();
-  const currentDateStr = now.toISOString().replace('T', ' ').slice(0, 19);
+  // 东八区北京时间
+  const beijingOffset = 8 * 60 * 60 * 1000;
+  const beijingTime = new Date(now.getTime() + beijingOffset);
+  const currentDateStr = beijingTime.toISOString().replace('T', ' ').slice(0, 19);
 
   return {
     model: config.deepseek.model || 'deepseek-v4-flash',
     messages: [
       {
         role: 'system',
-        content: `你是一个专业的水质分析专家。当前日期时间是 ${currentDateStr} UTC。请根据提供的传感器数据（TDS、COD、TOC、pH、温度、浊度等）输出中文 Markdown 报告，包含趋势、异常、原因和建议。报告生成时间和数据采集时间请以数据中的实际时间戳为准，不要编造日期。`
+        content: `你是一个专业的水质分析专家。当前北京时间是 ${currentDateStr} (UTC+8)。请根据提供的传感器数据（TDS、COD、TOC、pH、温度、浊度等）输出中文 Markdown 报告，包含趋势、异常、原因和建议。报告生成时间使用北京时间，数据采集时间以数据中的实际时间戳换算为北京时间，不要编造日期。`
       },
       {
         role: 'user',
