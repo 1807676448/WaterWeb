@@ -128,9 +128,15 @@ router.post('/iot/command', async (req, res) => {
       return;
     }
 
+    const commandLower = String(payload.command).trim().toLowerCase();
+    if (commandLower !== 'time' && commandLower !== 'dshelp') {
+      res.status(400).json({ error: '当前仅支持 command = time 或 dshelp' });
+      return;
+    }
+
     const result = await handleDeviceCommand(payload);
     if (!result) {
-      res.status(400).json({ error: '当前仅支持 command = time' });
+      res.status(400).json({ error: '命令执行失败' });
       return;
     }
 

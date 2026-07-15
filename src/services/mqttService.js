@@ -6,6 +6,7 @@ const {
   saveWaterQuality,
   updateDeviceStatus
 } = require('./deviceService');
+const { analyzeForEmbedded } = require('./deepseekService');
 
 let client;
 
@@ -40,7 +41,8 @@ function resolveDeviceId(topic, payload = {}) {
 
 async function handleDeviceCommand(commandPayload, sourceDeviceId) {
   const deviceId = commandPayload?.device_id || sourceDeviceId || 'unknown';
-  const command = commandPayload?.command || 'unknown';
+  const command = String(commandPayload?.command || 'unknown').trim();
+  const commandLower = command.toLowerCase();
 
   if (!commandPayload?.device_id && !sourceDeviceId) {
     await recordCommand(deviceId, command, commandPayload, {
@@ -50,25 +52,69 @@ async function handleDeviceCommand(commandPayload, sourceDeviceId) {
     return null;
   }
 
-  if (command !== 'time') {
-    await recordCommand(deviceId, command, commandPayload, {
-      ok: false,
-      error: 'unsupported command'
-    });
-    return null;
+  // ── time 命令：返回服务器时间 ──
+  if (commandLower === 'time') {
+    const response = {
+      type: 'time',
+      ok: true,
+      timestamp: Date.now()
+    };
+
+    const downTopic = config.mqtt.downlinkTopicTemplate.replace('{device_id}', deviceId);
+    client.publish(downTopic, JSON.stringify(response), { qos: 1 });
+
+    await recordCommand(deviceId, command, commandPayload, response);
+    return response;
   }
 
-  const response = {
-    ok: true,
-    timestamp: Date.now()
-  };
+  // ── dshelp 命令：DeepSeek AI 精简分析 ──
+  if (commandLower === 'dshelp') {
+    console.log(`[MQTT] dshelp command from device=${deviceId}`);
 
-  const downTopic = config.mqtt.downlinkTopicTemplate.replace('{device_id}', deviceId);
-  client.publish(downTopic, JSON.stringify(response), { qos: 1 });
+    try {
+      const aiResult = await analyzeForEmbedded(deviceId);
 
-  await recordCommand(deviceId, command, commandPayload, response);
+      const response = {
+        type: 'dshelp',
+        ok: aiResult.ok,
+        timestamp: Date.now(),
+        analysis: aiResult.analysis || '',
+        sample_count: aiResult.sample_count || 0,
+        device_id: aiResult.device_id || deviceId
+      };
 
-  return response;
+      const downTopic = config.mqtt.downlinkTopicTemplate.replace('{device_id}', deviceId);
+      client.publish(downTopic, JSON.stringify(response), { qos: 1 });
+
+      await recordCommand(deviceId, command, commandPayload, response);
+
+      console.log(`[MQTT] dshelp analysis sent to device=${deviceId}, ok=${aiResult.ok}`);
+      return response;
+    } catch (error) {
+      console.error('[MQTT] dshelp error:', error.message);
+
+      const errorResponse = {
+        type: 'dshelp',
+        ok: false,
+        timestamp: Date.now(),
+        analysis: 'AI分析异常，请稍后重试。',
+        error: String(error.message).slice(0, 80)
+      };
+
+      const downTopic = config.mqtt.downlinkTopicTemplate.replace('{device_id}', deviceId);
+      client.publish(downTopic, JSON.stringify(errorResponse), { qos: 1 });
+
+      await recordCommand(deviceId, command, commandPayload, errorResponse);
+      return errorResponse;
+    }
+  }
+
+  // ── 不支持的命令 ──
+  await recordCommand(deviceId, command, commandPayload, {
+    ok: false,
+    error: 'unsupported command'
+  });
+  return null;
 }
 
 function connectMqtt() {
